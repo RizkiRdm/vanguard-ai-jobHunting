@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from modules.profile.router import router as profile_router
+from modules.agent.router import router as agent_router
 from dotenv import load_dotenv
 import os
 
@@ -12,7 +14,6 @@ app = FastAPI(
 )
 
 # Mount Static Files (for custom CSS/JS if any)
-# Make sure the folder exists: mkdir static
 if not os.path.exists("static"):
     os.makedirs("static")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -32,8 +33,8 @@ async def root(request: Request):
 
 # TODO: Register Routers from modules
 # app.include_router(auth_router)
-# app.include_router(profile_router)
-# app.include_router(agent_router)
+app.include_router(profile_router)
+app.include_router(agent_router)
 
 if __name__ == "__main__":
     import uvicorn

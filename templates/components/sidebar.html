@@ -1,0 +1,36 @@
+<aside class="w-64 bg-slate-900/80 border-r border-slate-800 h-[calc(100vh-64px)] hidden lg:block sticky top-16">
+    <div class="p-6 flex flex-col justify-between h-full">
+        <div class="space-y-4">
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Quick Actions</h3>
+            <ul class="space-y-2">
+                <li>
+                    <button hx-post="/agent/task/start" hx-target="#main-content"
+                        class="w-full text-left px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        New Hunting Task
+                    </button>
+                </li>
+            </ul>
+
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider pt-4">Status Overview</h3>
+            <div class="bg-slate-800/50 p-4 rounded-lg space-y-2">
+                <div class="flex justify-between text-xs">
+                    <span class="text-slate-400">Agent Status:</span>
+                    <span class="text-emerald-400 font-mono">IDLE</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                    <span class="text-slate-400">Total Apps:</span>
+                    <span class="text-blue-400 font-mono">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="border-t border-slate-800 pt-4">
+            <p class="text-[10px] text-slate-600 text-center">Vanguard Copilot v0.1.0-alpha</p>
+        </div>
+    </div>
+
+
+</aside>
