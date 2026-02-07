@@ -3,7 +3,15 @@ import sys
 from core.database import engine, Base
 
 # Import all models here to ensure they are registered on Base.metadata
+# tech Models
 from core.models_tech import AgentTask, AgentExecutionLog, LLMUsageLog
+
+# Auth Models (Coming soon)
+# from modules.auth.models import User
+from modules.auth.model import User
+
+# Profile Business Models
+from modules.profile.models import UserProfile, UserExperience, UserSkill
 
 
 async def init_models():
@@ -18,7 +26,9 @@ async def init_models():
         # await conn.run_sync(Base.metadata.drop_all)
 
         print("Creating tables in progress...")
+        print("Syncing schemas with PostgreSQL (Checking for new tables)...")
         await conn.run_sync(Base.metadata.create_all)
+        print("Database sync completed! Only missing tables were created. 🚀")
         print("Tables created successfully! Fr fr, no cap.")
 
 
