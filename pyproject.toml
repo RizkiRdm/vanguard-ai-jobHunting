@@ -6,4 +6,6 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "asyncpg>=0.31.0",
+    "google-genai>=1.62.0",
+    "httpx>=0.28.1",
 ]
