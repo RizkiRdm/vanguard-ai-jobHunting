@@ -7,7 +7,6 @@ from core.database import engine, Base
 from core.models_tech import AgentTask, AgentExecutionLog, LLMUsageLog
 
 # Auth Models (Coming soon)
-# from modules.auth.models import User
 from modules.auth.model import User
 
 # Profile Business Models
