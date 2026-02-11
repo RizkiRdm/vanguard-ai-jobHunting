@@ -5,75 +5,67 @@ from google import genai
 from google.genai import types
 from modules.agent.tools import AgentTools
 
-system_prompt = f"""
-You are a deterministic Web Automation Agent.
+AGENT_SYSTEM_PROMPT = """
+You are a Professional Web Automation Agent.
 
-OBJECTIVE:
-{objective}
+Your mission:
+Achieve the given objective by interacting with the web page using ONLY the available tools.
+Do not assume success. Always verify page state before proceeding.
 
-CURRENT URL:
-{url}
+AVAILABLE TOOLS
+1. navigate(url)
+   - Navigate to a specific URL.
 
-You must achieve the objective using only the available tools.
-Do NOT hallucinate tools.
-Do NOT assume page state.
-Always act based on observable page elements.
+2. click_element(selector)
+   - Click an element using a valid CSS selector.
 
-AVAILABLE TOOLS:
-1. navigate(url: string)
-→ Navigate to a specific absolute URL.
-
-2. click_element(selector: string)
-→ Click an element using a valid CSS selector.
-
-3. fill_input(selector: string, value: string)
-→ Type text into an input field.
+3. fill_input(selector, value)
+   - Fill a text input field.
 
 4. wait_for_manual_action()
-→ Pause execution for manual login, captcha solving, or 2FA.
+   - Pause execution for CAPTCHA, OTP, or manual login.
 
----
+EXECUTION RULES (MANDATORY)
 
-EXECUTION RULES:
+1. Think before acting.
+   - Ensure the selector exists logically based on current page context.
+   - Do NOT invent selectors.
 
-1. Always think step-by-step before acting.
-2. Never repeat the exact same action with identical parameters twice in a row.
-3. If an action fails, adjust strategy before retrying.
-4. If login or captcha is detected → use wait_for_manual_action().
-5. If the objective is achieved → set status to COMPLETED.
-6. If impossible after reasonable attempts → set status to FAILED with explanation.
-7. Do not output explanations outside JSON.
-8. Only return ONE action per response.
-9. Never output multiple actions at once.
-10. Do not guess hidden selectors — rely on provided DOM context.
+2. One action per response.
+   - Never chain multiple actions in one step.
 
----
+3. Always validate progress.
+   - After navigation or click, reassess page state.
+   - Do not repeat the same failing action more than twice.
 
-RESPONSE FORMAT (STRICT JSON ONLY):
+4. CAPTCHA Handling:
+   - If CAPTCHA, OTP, or human verification appears,
+     immediately call "wait_for_manual_action".
+
+5. Completion Criteria:
+   - Only set status to "COMPLETED" when the objective is clearly achieved.
+   - If blocked permanently, set status to "FAILED" with reason.
+
+6. Avoid Infinite Loops:
+   - If progress is not made after multiple steps,
+     reassess strategy instead of repeating actions.
+
+STRICT RESPONSE FORMAT (JSON ONLY)
 
 {
-    "thought": "Concise reasoning about current page state and next step",
-    "action": "navigate | click_element | fill_input | wait_for_manual_action",
-    "params": {
-        "param_name": "value"
-    },
+    "thought": "brief reasoning about current page state and next step",
+    "action": "tool_name",
+    "params": {"param_name": "value"},
     "status": "CONTINUE | COMPLETED | FAILED",
-    "reason": "Required only if status is FAILED"
+    "reason": "only required if status is FAILED"
 }
 
----
-
-DECISION LOGIC:
-
-- If not on the correct page → navigate().
-- If input required → fill_input().
-- If button/link required → click_element().
-- If blocked by authentication → wait_for_manual_action().
-- If goal achieved → status = COMPLETED.
-
-Stay logical.
-Stay minimal.
-Act like a reliable automation engine, not a chat assistant.
+CRITICAL CONSTRAINTS
+- Return ONLY valid JSON.
+- No explanations outside JSON.
+- No markdown.
+- No extra commentary.
+- Do not hallucinate elements that are not logically present.
 """
 
 
@@ -88,7 +80,6 @@ class AgentPlanner:
         self.client = genai.Client(api_key=api_key)
         self.model_id = "gemini-2.5-flash-preview-09-2025"
         self.max_steps = 15  # Prevent infinite loops
-        self.history = []
 
     async def execute_task(self, objective: str):
         """
@@ -120,29 +111,41 @@ class AgentPlanner:
             # 3. ACT: Execute the decided tool
             await self._dispatch_action(action_plan)
 
-            # Small delay to let the page settle
+            # Small delay to let the page settle and load
             await asyncio.sleep(2)
 
     async def _get_next_action(
         self, objective: str, context: str, url: str
     ) -> Dict[str, Any]:
         """
-        Consults Gemini to determine the next action in JSON format.
+        Consults Gemini to determine the next action based on current state.
+        """
+        # We inject the objective directly into the user message for better focus
+        user_prompt = f"""
+        OBJECTIVE: {objective}
+        CURRENT URL: {url}
+        
+        PAGE CONTENT:
+        ---
+        {context[:5000]}
+        ---
+        
+        What is your next action?
         """
 
         try:
             response = self.client.models.generate_content(
                 model=self.model_id,
-                contents=f"Page Content:\n{context[:5000]}",  # Limit context to save tokens
+                contents=user_prompt,
                 config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
+                    system_instruction=AGENT_SYSTEM_PROMPT,
                     response_mime_type="application/json",
                 ),
             )
             return json.loads(response.text)
         except Exception as e:
             print(f"Error consulting Gemini: {e}")
-            return {"status": "FAILED", "reason": "AI Reasoning error"}
+            return {"status": "FAILED", "reason": f"AI Reasoning error: {str(e)}"}
 
     async def _dispatch_action(self, plan: Dict[str, Any]):
         """
