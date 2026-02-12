@@ -1,5 +1,50 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{%block content%}
-<p>heki</p>
-{%endblock%}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header Section -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white mb-2">Agent Control Center</h1>
+        <p class="text-slate-400">Deploy your autonomous agent to hunt and analyze job opportunities across the web.</p>
+    </div>
+
+    <!-- Input Card -->
+    <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 mb-8 shadow-sm">
+        <form hx-post="/agent/task/start" hx-target="#monitoring-area" hx-indicator="#global-loader" class="space-y-4">
+            <div>
+                <label for="target_url" class="block text-sm font-medium text-slate-300 mb-2">Target URL / Job
+                    Portal</label>
+                <div class="flex flex-col md:flex-row gap-4">
+                    <input type="url" id="target_url" name="target_url" required
+                        placeholder="https://www.linkedin.com/jobs/search/..."
+                        class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition outline-none">
+
+                    <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span>Launch Agent</span>
+                    </button>
+                </div>
+            </div>
+            <p class="text-xs text-slate-500 italic">
+                Note: The agent will use your stored profile and credentials to analyze matching roles.
+            </p>
+        </form>
+    </div>
+
+    <!-- Monitoring Area (Where the HTMX fragment will be injected) -->
+    <div id="monitoring-area" class="min-h-[100px]">
+        <div
+            class="flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-800 rounded-2xl text-slate-600">
+            <svg class="w-12 h-12 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="text-sm">No active task. Enter a URL above to start monitoring.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
