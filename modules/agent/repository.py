@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, func
+from sqlalchemy import select, desc, func, or_
 from uuid import UUID
 from typing import List, Optional, Dict
 from core.models_tech import AgentTask, AgentExecutionLog, LLMUsageLog
@@ -29,6 +29,18 @@ class AgentRepository:
         """
         result = await self.db.execute(select(AgentTask).where(AgentTask.id == task_id))
         return result.scalars().first()
+
+    async def get_failed_or_interrupted_tasks(self, user_id: UUID) -> List[AgentTask]:
+        """
+        Retrieves tasks that are in FAILED or STOPPED status for recovery.
+        """
+        result = await self.db.execute(
+            select(AgentTask)
+            .where(AgentTask.user_id == user_id)
+            .where(or_(AgentTask.status == "FAILED", AgentTask.status == "STOPPED"))
+            .order_by(desc(AgentTask.created_at))
+        )
+        return result.scalars().all()
 
     async def get_recent_logs(
         self, task_id: UUID, limit: int = 50
