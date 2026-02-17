@@ -20,18 +20,18 @@ def test_encryption_roundtrip():
     ],
 )
 def test_mask_email_scenarios(input_email, expected_output):
-    """Mengetes berbagai skenario masking email dalam satu fungsi."""
+    """Testing various email masking scenarios in one function."""
     assert mask_email(input_email) == expected_output
 
 
 @pytest.mark.parametrize("empty_input", ["", None])
 def test_encryption_empty_input(empty_input):
-    """Memastikan input kosong atau None dikembalikan apa adanya."""
+    """Ensuring that empty or None inputs are returned without modification."""
     encrypted = encrypt_credential(empty_input)
     decrypted = decrypt_credential(empty_input)
 
     assert encrypted == empty_input
     assert decrypted == empty_input
 
-    # Tambahan pengecekan tipe data agar lebih pasti
+    # Additional data type checks for greater certainty
     assert type(encrypted) is type(empty_input)
