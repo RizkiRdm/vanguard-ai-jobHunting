@@ -7,7 +7,6 @@ Vanguard is a high-performance, **Autonomous AI Agent** designed to bridge the g
 This project follows **Clean Architecture** principles to ensure long-term scalability and maintainability, making it ready to transition from a personal tool to a multi-user SaaS.
 
 ### 🧩 Key Layers:
-- **Presentation Layer (Streamlit):** Reactive UI for real-time agent monitoring and profile management.
 - **Agentic Layer (Playwright + LLM):** An autonomous "Reasoning Loop" (Observe -> Think -> Act) that controls a headless browser.
 - **Service/Business Layer:** Encapsulated logic for resume tailoring, skill extraction, and job matching.
 - **Data Access Layer (SQLAlchemy):** Decoupled repository pattern supporting 3NF normalized schemas for business data.
@@ -28,52 +27,46 @@ Vanguard's agent operates using **Tiered Intelligence**:
 
 ## 📁 Project Structure
 
-```text
+``` tree
 vanguard-app/
-├── core/                       # [SYSTEM LAYER] - Internal Engine
-│   ├── database.py             # SQLAlchemy Base & Session Engine
-│   ├── models_tech.py          # [NEW] Schema: LLMLogs, AgentTasks, PortalHealth
-│   ├── llm_client.py           # Unified AI Interface & Token Tracker
-│   ├── browser_engine.py       # Playwright Manager (Headless/Headful)
-│   └── config.py               # Settings & Secret Management (AES Encryption logic)
-├── modules/                    # [BUSINESS LOGIC] - Modular Domains
-│   ├── profile/                # Domain: Identity & Skills
-│   │   ├── models.py           # Schema: Users, Profiles, Skills, Experiences
-│   │   ├── repository.py       # CRUD logic khusus Profile
-│   │   └── service.py          # Business Logic: Parsing & Skill Extraction
-│   ├── agent/                  # Domain: Autonomous Action
-│   │   ├── models.py           # Schema: JobApplications, Portals, Credentials
-│   │   ├── planner.py          # Reasoning Loop: Think -> Act -> Observe
-│   │   ├── tools.py            # Browser Tools: click(), fill_form()
-│   │   └── service.py          # Bridge: Task orchestration
-│   ├── generator/              # Domain: Dynamic Content
-│   │   ├── service.py          # Logic: AI CV Tailoring
-│   │   └── document.py         # Output: PDF/Docx generation
-│   └── notifications/          # [NEW] Domain: Engagement
-│       ├── models.py           # Schema: User Notifications
-│       └── service.py          # Logic: Push/In-app alerts
-├── shared/                     # [CONTRACT LAYER] - Data Bridge
-│   └── schemas.py              # Pydantic Models (The "Source of Truth" for AI)
-├── ui/                         # [PRESENTATION LAYER] - Streamlit
-│   ├── components/             # Reusable UI (Log Terminal, Metric Cards)
-│   └── pages/                  # Streamlit Multi-page Routing
-├── data/                       # Local Storage (DuckDB DB, Screenshots)
-├── main.py                     # Entry Point
-└── requirements.txt
+├── core/                       # Shared Engine
+│   ├── database.py             # SQLAlchemy Async + Optimistic Lock Config
+│   ├── security.py             # AES-256 & PII Masking
+│   ├── ai_engine.py            # Gemini SDK + Phoenix Tracing
+│   ├── browser.py              # Playwright Worker Setup
+│   └── malware_scan.py         # ClamAV Wrapper
+├── modules/                    # Business Domains
+│   ├── profile/                # M: Portfolio, V: JSON, C: API
+│   ├── agent/                  # M: Task, V: JSON, C: API/WS
+│   └── generator/              # M: TailoredDoc, V: JSON, C: API
+├── shared/                     # The Contract
+│   └── schemas.py              # Pydantic (Input/Output Validation)
+├── tests/                      # Testing Suite (Pytest)
+│   ├── unit/                   # Security, Parsing, & Logic tests
+│   ├── integration/            # API Endpoints & DB Race Condition tests
+│   ├── e2e/                    # Full Scraping-to-Apply simulations
+│   └── conftest.py             # Fixtures for Mock DB & Async Loop
+├── main.py                     # App Entry Point
+└── .env.example
 ```
 
 ## 🛠️ Tech Stack
 
 * **Language:** Python 3.10+
-* **Backend Framework:** FastAPI / Streamlit (Interface)
+* **Backend Framework:** FastAPI
+* **Documentation:** Scalar
 * **ORM:** SQLAlchemy 2.0
+* **Async Task Queue:** TaskIQ
+* **Malware Scanning:** ClamAV
+* **AI Observability:** Arize Phoenix
 * **Automation:** Playwright
-* **AI Integration:** OpenAI API / Anthropic / LangChain
+* **Database:** PostgreSQL
+* **AI Integration:** Gemini AI SDK
 * **Validation:** Pydantic v2
+* **Security:** AES-256, JWT, OAuth
 
 ## 🚀 Future Roadmap
 
-* [ ] **Multi-user SaaS Support:** Integrated Auth & Subscription management.
 * [ ] **IP Rotation:** Proxy integration for high-volume job scouting.
 * [ ] **Advanced Human-in-the-loop:** Mobile notifications for final submission approval.
 
