@@ -55,7 +55,7 @@ vanguard-app/
 * **Language:** Python 3.10+
 * **Backend Framework:** FastAPI
 * **Documentation:** Scalar
-* **ORM:** SQLAlchemy 2.0
+* **ORM:** Tortoise ORM
 * **Async Task Queue:** TaskIQ
 * **Malware Scanning:** ClamAV
 * **AI Observability:** Arize Phoenix
