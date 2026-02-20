@@ -11,7 +11,11 @@ TORTOISE_CONFIG = {
     "connections": {"default": DATABASE_URL},
     "apps": {
         "models": {
-            "models": ["modules.profile.models", "aerich.models"],
+            "models": [
+                "modules.profile.models",
+                "aerich.models",
+                "modules.agent.models",
+            ],
             "default_connection": "default",
         }
     },
