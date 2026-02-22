@@ -54,7 +54,7 @@ vanguard-app/
 
 * **Language:** Python 3.10+
 * **Backend Framework:** FastAPI
-* **Documentation:** Scalar
+* **Documentation:** swagger
 * **ORM:** Tortoise ORM
 * **Async Task Queue:** TaskIQ
 * **Malware Scanning:** ClamAV

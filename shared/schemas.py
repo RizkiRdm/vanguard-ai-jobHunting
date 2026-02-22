@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, ConfigDict
 from typing import Optional
 from core.security import mask_email
 
@@ -15,5 +15,4 @@ class UserProfileResponse(BaseModel):
         # Using the mask_email function from core/security.py
         return mask_email(v)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
