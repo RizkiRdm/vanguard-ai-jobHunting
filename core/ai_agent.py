@@ -67,18 +67,7 @@ class VanguardAI:
             prompt = prompt_template.replace("{{goal}}", goal)
 
             # API Execution
-            # response = await self._call_gemini_api(prompt, image)
-            # --- MOCK LOGIC UNTUK TEST ---
-            class MockUsage:
-                prompt_token_count = 100
-                candidates_token_count = 50
-                total_token_count = 150
-
-            class MockResponse:
-                text = '{"action": "complete", "reasoning": "done"}'
-                usage_metadata = MockUsage()
-
-            response = MockResponse()
+            response = await self._call_gemini_api(prompt, image)
 
             # Deterministic logging (Wait for DB)
             await self._log_token_usage(response, user_id)
