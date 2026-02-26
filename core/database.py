@@ -13,8 +13,8 @@ TORTOISE_CONFIG = {
         "models": {
             "models": [
                 "modules.profile.models",
-                "aerich.models",
                 "modules.agent.models",
+                "aerich.models",
             ],
             "default_connection": "default",
         }
