@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 import google.genai as genai
-from core.logging import logger
+from core.custom_logging import logger
 from dotenv import load_dotenv
 from modules.agent.models import LLMUsageLog
 from PIL import Image

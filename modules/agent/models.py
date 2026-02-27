@@ -13,7 +13,7 @@ class TaskStatus(str, Enum):
 class AgentTask(models.Model):
     id = fields.UUIDField(primary_key=True)
     user = fields.ForeignKeyField(
-        "models.User", related_name="tasks", on_delete=fields.SET_NULL
+        "models.User", related_name="tasks", on_delete=fields.SET_NULL, null=True
     )
     task_type = fields.CharField(max_length=20)
     status = fields.CharEnumField(TaskStatus, default=TaskStatus.QUEUED)

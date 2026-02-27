@@ -29,6 +29,7 @@ dependencies = [
     "python-multipart>=0.0.22",
     "sqlalchemy>=2.0.46",
     "structlog>=25.5.0",
+    "taskiq>=0.12.1",
     "tenacity>=9.1.4",
     "uvicorn>=0.41.0",
 ]
