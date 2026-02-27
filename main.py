@@ -9,6 +9,7 @@ from core.database import TORTOISE_CONFIG
 from modules.profile.profile_router import router as profile_router
 from modules.agent.agent_router import router as agent_router
 from core.custom_logging import logger
+from shared.schemas import HealthResponse
 
 # Global in-memory store for rate limiting
 # Using list for timestamps to track requests within a sliding window
@@ -45,10 +46,12 @@ def create_application() -> FastAPI:
 app = create_application()
 
 
-@app.get("/health")
+@app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Simple health check endpoint to verify API and DB connectivity."""
-    return {"status": "operational", "engine": "Tortoise ORM", "timestamp": time.time()}
+    return HealthResponse(
+        status="operational", engine="Tortoise ORM", timestamp=time.time()
+    )
 
 
 @app.middleware("http")

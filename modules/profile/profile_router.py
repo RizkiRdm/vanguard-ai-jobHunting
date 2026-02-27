@@ -6,7 +6,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile, Depends
 
 from modules.agent.models import AgentTask, TaskStatus
 from modules.profile.models import User
-from shared.schemas import UserProfileResponse
+from shared.schemas import ErrorResponse, PipelineResponse, UserProfileResponse
 from core.security import MalwareScanner
 from core.custom_logging import logger
 
@@ -15,24 +15,17 @@ STORAGE_DIR = Path("storage")
 STORAGE_DIR.mkdir(exist_ok=True)
 
 
-@router.get("/{user_id}", response_model=UserProfileResponse)
+@router.get(
+    "/{user_id}",
+    response_model=UserProfileResponse,
+    responses={404: {"model": ErrorResponse}},
+)
 async def get_profile(user_id: str):
-    """
-    Retrieves user profile data with masked PII.
-    """
     user = await User.get_or_none(id=user_id).prefetch_related("profile")
-
     if not user:
-        logger.error("profile_not_found", user_id=user_id)
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Map database models to Pydantic response schema
-    return {
-        "id": str(user.id),
-        "email": user.email,
-        "target_role": user.profile.target_role if user.profile else None,
-        "summary": user.profile.summary if user.profile else None,
-    }
+    return UserProfileResponse.model_validate(user)
 
 
 @router.post("/upload-resume")
@@ -58,7 +51,11 @@ async def upload_resume(
             temp_path.unlink()
 
 
-@router.post("/process-pipeline")
+@router.post(
+    "/process-pipeline",
+    response_model=PipelineResponse,
+    responses={400: {"model": ErrorResponse}, 403: {"model": ErrorResponse}},
+)
 async def trigger_pipeline(
     user_id: str, file: UploadFile = File(...), scanner: MalwareScanner = Depends()
 ):
@@ -86,11 +83,11 @@ async def trigger_pipeline(
 
         logger.info("pipeline_task_queued", task_id=task_id, user_id=user_id)
 
-        return {
-            "status": "queued",
-            "task_id": task_id,
-            "detail": "File accepted. Background processing has started.",
-        }
+        return PipelineResponse(
+            status="queued",
+            task_id=task_id,
+            detail="File accepted. Background processing has started.",
+        )
 
     except Exception as e:
         # Cleanup file if pre-queue validation fails
