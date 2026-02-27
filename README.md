@@ -30,7 +30,7 @@ Vanguard's agent operates using **Tiered Intelligence**:
 ``` tree
 vanguard-app/
 ├── core/                       # Shared Engine
-│   ├── database.py             # SQLAlchemy Async + Optimistic Lock Config
+│   ├── database.py             # Tortoise Async + Optimistic Lock Config
 │   ├── security.py             # AES-256 & PII Masking
 │   ├── ai_engine.py            # Gemini SDK + Phoenix Tracing
 │   ├── browser.py              # Playwright Worker Setup
@@ -56,9 +56,7 @@ vanguard-app/
 * **Backend Framework:** FastAPI
 * **Documentation:** swagger
 * **ORM:** Tortoise ORM
-* **Async Task Queue:** TaskIQ
 * **Malware Scanning:** ClamAV
-* **AI Observability:** Arize Phoenix
 * **Automation:** Playwright
 * **Database:** PostgreSQL
 * **AI Integration:** Gemini AI SDK
