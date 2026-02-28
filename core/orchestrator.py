@@ -6,12 +6,14 @@ from contextlib import suppress
 from fastapi import UploadFile
 from tortoise.exceptions import OperationalError
 
+from core.scraper import JobScraper
 from core.security import MalwareScanner
 from core.ai_agent import VanguardAI
 from core.browser import BrowserManager
 from core.task_manager import update_task_status
 from core.custom_logging import logger
 from modules.agent.models import AgentTask, TaskStatus
+from modules.generator.services import generate_tailored_document
 
 
 class JobOrchestrator:
@@ -22,15 +24,65 @@ class JobOrchestrator:
         self.log = logger.bind(service="orchestrator")
         self.storage_path = Path("storage")
         self.storage_path.mkdir(exist_ok=True)
+        self.scraper = JobScraper()
+
+    async def execute_from_worker(
+        self, task_id: str, user_id: str, task_type: str, bound_logger=None
+    ):
+        """
+        Main entry point for the background worker to execute specific task types.
+        Handles Discovery (Scraping) and Tailoring (Document Generation).
+        """
+        log = bound_logger or self.log
+        log.info("worker_orchestration_started", task_type=task_type)
+
+        # Use the Async Context Manager from BrowserManager as defined in browser.py
+        async with self.browser.get_context() as context:
+            page = await context.new_page()
+
+            if task_type == "DISCOVERY":
+                log.info("executing_discovery_logic")
+                # TODO: Retrieve target_url from task metadata in production
+                target_url = "https://www.linkedin.com/jobs/view/12345"
+
+                try:
+                    await page.goto(target_url, wait_until="networkidle")
+                    # Trigger LLM-driven scraping
+                    result = await self.scraper.scrape_llm(page, user_id)
+                    return result
+                except Exception as e:
+                    log.error("discovery_failed", error=str(e))
+                    raise e
+
+            elif task_type == "TAILORING":
+                log.info("executing_tailoring_logic")
+                # Example context, should be fetched from ScrapedJob table in real flow
+                job_context = "Software Engineer position at TechCorp"
+
+                try:
+                    result = await generate_tailored_document(
+                        user_id, task_id, job_context
+                    )
+                    return result
+                except Exception as e:
+                    log.error("tailoring_failed", error=str(e))
+                    raise e
+
+            else:
+                log.warning("unknown_task_type", task_type=task_type)
+                return None
 
     async def run_full_pipeline(
         self, user_id: str, upload_file: UploadFile, target_url: str
     ):
-        """Main entry point for synchronous API flow."""
+        """
+        Legacy/Synchronous entry point for immediate API processing.
+        Usually followed by manual upload and scan.
+        """
         task_id = str(uuid.uuid4())
         temp_file = self.storage_path / f"temp_{task_id}_{upload_file.filename}"
 
-        self.log.info("pipeline_started", user_id=user_id, task_id=task_id)
+        self.log.info("sync_pipeline_started", user_id=user_id, task_id=task_id)
 
         try:
             # 1. Security validation
@@ -39,70 +91,29 @@ class JobOrchestrator:
             await self.scanner.verify_file_safety(str(temp_file))
 
             # 2. Persist initial task state
-            task = await AgentTask.create(
+            await AgentTask.create(
                 id=task_id,
                 user_id=user_id,
-                task_type="APPLYING",
+                task_type="DISCOVERY",
                 status=TaskStatus.RUNNING,
             )
 
-            # 3. Browser & AI Execution
-            async with self.browser.get_context() as context:
-                page = await context.new_page()
-                await page.goto(target_url)
-
-                ss_path = self.storage_path / f"ss_{task_id}.png"
-                await page.screenshot(path=str(ss_path))
-
-                decision = await self.ai.analyze_screen(
-                    str(ss_path), goal=f"Apply for job at {target_url}", user_id=user_id
-                )
-
-                # 4. Finalize Task Status
-                new_status = (
-                    TaskStatus.COMPLETED
-                    if decision.get("action") == "complete"
-                    else TaskStatus.FAILED
-                )
-                await update_task_status(
-                    task.id, new_status, error=decision.get("reasoning")
-                )
-
-                with suppress(FileNotFoundError):
-                    ss_path.unlink()
-
-            return {"status": "success", "task_id": task_id}
+            # 3. Execute logic immediately (Synchronous API behavior)
+            return await self.execute_from_worker(task_id, user_id, "DISCOVERY")
 
         except Exception as e:
-            self.log.error("pipeline_execution_failed", error=str(e))
-            if "task" in locals():
-                await update_task_status(task.id, TaskStatus.FAILED, error=str(e))
+            self.log.error("sync_pipeline_failed", error=str(e))
+            await update_task_status(task_id, TaskStatus.FAILED, error=str(e))
             raise e
-
         finally:
+            # Cleanup temp file
             with suppress(FileNotFoundError):
-                temp_file.unlink()
-
-    async def execute_from_worker(
-        self, user_id: str, file_path: str, target_url: str, bound_logger=None
-    ):
-        """Wrapper for background worker execution logic."""
-        log = bound_logger or self.log.bind(user_id=user_id)
-        log.info("worker_orchestration_triggered")
-
-        # Placeholder for real browser logic
-        # In the future, this would call analyze_screen and browser actions
-
-        return await self.update_user_profile_safe(
-            user_id,
-            {"summary": "Profile successfully processed via background worker"},
-            log=log,
-        )
+                os.remove(temp_file)
 
     async def update_user_profile_safe(self, user_id: str, data: dict, log=None):
         """
-        Updates user profile using Optimistic Locking.
-        Compliant with Blueprint Section 6.
+        Updates user profile using Optimistic Locking to prevent race conditions.
+        Ensures data integrity during concurrent updates.
         """
         from modules.profile.models import User, UserProfile
 
@@ -112,7 +123,7 @@ class JobOrchestrator:
         user = await User.get(id=user_id)
         current_version = user.version
 
-        # 2. Increment version using atomic update filter
+        # 2. Increment version using atomic update filter (Optimistic Locking)
         updated_rows = await User.filter(id=user_id, version=current_version).update(
             version=current_version + 1
         )

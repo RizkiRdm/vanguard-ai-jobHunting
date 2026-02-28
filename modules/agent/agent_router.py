@@ -1,5 +1,8 @@
+import uuid
+
 from fastapi import APIRouter, Depends, Response
 from core.security import get_current_user_from_cookie, create_access_token
+from modules.agent.models import AgentTask, TaskStatus
 
 router = APIRouter(prefix="/agent", tags=["Agent"])
 
@@ -19,6 +22,18 @@ async def login_test(response: Response):
 
 
 @router.post("/scrape")
-async def scrape_web(user_id: str = Depends(get_current_user_from_cookie)):
-    """Endpoint sensitif yang dilindungi JWT & Rate Limit"""
-    return {"message": f"Scraping started for user {user_id}"}
+async def scrape_web(
+    target_url: str, user_id: str = Depends(get_current_user_from_cookie)
+):
+    task_id = str(uuid.uuid4())
+
+    # Masukkan ke antrean task (DISCOVERY)
+    await AgentTask.create(
+        id=task_id, user_id=user_id, task_type="DISCOVERY", status=TaskStatus.QUEUED
+    )
+
+    return {
+        "status": "queued",
+        "task_id": task_id,
+        "message": "Scraping task initiated via Gemini AI.",
+    }
