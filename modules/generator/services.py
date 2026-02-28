@@ -3,7 +3,11 @@ from core.ai_agent import VanguardAI
 
 
 async def generate_tailored_document(
+<<<<<<< HEAD
     user_id: str, job_context: str, profile_summary: str, doc_type: str = "CV"
+=======
+    user_id: str, task_id: str, job_context: str, doc_type: str = "CV"
+>>>>>>> 8a68e69 (refactor(core): improve scraping reliability and mock stability)
 ):
     """
     Menggunakan Gemini untuk membuat CV atau Cover Letter yang disesuaikan dengan job description.
@@ -19,9 +23,12 @@ Create a tailored {doc_type} specifically optimized for the job described below.
 Job Description:
 {job_context}
 
+<<<<<<< HEAD
 User Profile Summary:
 {profile_summary}
 
+=======
+>>>>>>> 8a68e69 (refactor(core): improve scraping reliability and mock stability)
 Requirements:
 - Use a professional and confident tone.
 - Align skills and experiences directly with the job requirements.
@@ -41,9 +48,15 @@ Do not include explanations.
     )
     tailored_content = response.text
 
+<<<<<<< HEAD
     # Save to DB
     doc = await TailoredDocument.create(
         user_id=user_id, doc_type=doc_type, content=tailored_content
+=======
+    # Simpan ke DB
+    doc = await TailoredDocument.create(
+        task_id=task_id, doc_type=doc_type, content=tailored_content
+>>>>>>> 8a68e69 (refactor(core): improve scraping reliability and mock stability)
     )
 
     return doc

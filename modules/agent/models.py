@@ -4,7 +4,10 @@ from enum import Enum
 
 class TaskStatus(str, Enum):
     DISCOVERY = "DISCOVERY"
+<<<<<<< HEAD
     AUTOMATED_APPLY = "AUTOMATED_APPLY"
+=======
+>>>>>>> 8a68e69 (refactor(core): improve scraping reliability and mock stability)
     QUEUED = "QUEUED"
     RUNNING = "RUNNING"
     AWAITING_USER = "AWAIT_USER"
