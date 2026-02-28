@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from uuid import UUID
@@ -36,3 +38,36 @@ class HealthResponse(BaseModel):
     status: str
     engine: str
     timestamp: float
+
+
+class ScrapedJobBase(BaseModel):
+    job_title: str
+    company_name: str
+    location: Optional[str] = None
+    employment_type: Optional[str] = None
+    salary_range: Optional[str] = None
+    job_description: str
+    requirements: List[str] = []
+    source_url: str
+    posted_date: Optional[str] = None
+
+
+class ScrapedJobResponse(ScrapedJobBase):
+    id: UUID
+    user_id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# --- Tailored Document Schemas ---
+class TailoredDocumentResponse(BaseModel):
+    id: UUID
+    task_id: UUID
+    doc_type: str  # CV atau Cover Letter
+    content: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

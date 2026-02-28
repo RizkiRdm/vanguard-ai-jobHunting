@@ -3,6 +3,7 @@ from enum import Enum
 
 
 class TaskStatus(str, Enum):
+    DISCOVERY = "DISCOVERY"
     QUEUED = "QUEUED"
     RUNNING = "RUNNING"
     AWAITING_USER = "AWAITING_USER"
