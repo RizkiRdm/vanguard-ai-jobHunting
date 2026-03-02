@@ -1,8 +1,8 @@
 import os
-import asyncio
+import random
 from datetime import datetime
 from contextlib import asynccontextmanager
-from playwright.async_api import async_playwright, Browser, BrowserContext, Page
+from playwright.async_api import async_playwright, Page
 
 
 class BrowserManager:
@@ -13,49 +13,55 @@ class BrowserManager:
 
     @asynccontextmanager
     async def get_context(self):
-        """
-        Context Manager to ensure browser resources are closed safely.
-        Prevents zombie processes/memory leaks.
-        """
         async with async_playwright() as p:
-            # Launch with optimization flags for the Docker/Linux environment
+            # Menggunakan stealth-like args agar tidak mudah terdeteksi LinkedIn
             browser = await p.chromium.launch(
-                headless=self.headless, args=["--disable-dev-shm-usage", "--no-sandbox"]
+                headless=self.headless,
+                args=["--disable-blink-features=AutomationControlled"],
             )
+            # Menambahkan locale dan timezone agar terlihat seperti user asli
             context = await browser.new_context(
-                viewport={"width": 1280, "height": 720},
-                user_agent="Vanguard-Agent/1.0 (AI Job Hunting Copilot)",
+                viewport={"width": 1280, "height": 800},
+                user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+                locale="en-US",
+                timezone_id="Asia/Jakarta",
             )
             try:
                 yield context
             finally:
-                # Ensuring resources are cleaned up no matter what happens
                 await context.close()
                 await browser.close()
 
-    async def take_failure_screenshot(self, page: Page, task_id: str):
+    async def get_page_state(self, page: Page):
         """
-        Capturing visual evidence if the task fails.
-        Stored in storage/screenshots/.
+        Mengambil snapshot visual dan teks untuk dianalisis oleh VanguardAI.
+        Ini adalah 'Input' utama untuk AI menentukan langkah selanjutnya.
         """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"FAIL_{task_id}_{timestamp}.png"
-        path = os.path.join(self.screenshot_dir, filename)
-        await page.screenshot(path=path, full_page=True)
-        return path
+        screenshot_path = os.path.join(
+            self.screenshot_dir, f"state_{int(datetime.now().timestamp())}.png"
+        )
+        await page.screenshot(path=screenshot_path)
 
-    async def simple_navigate(self, url: str, task_id: str = "manual_test"):
+        # Ambil teks yang terlihat saja (clean)
+        content = await page.evaluate("() => document.body.innerText")
+        return {"screenshot": screenshot_path, "text": content}
+
+    async def execute_action(self, page: Page, action: dict):
         """
-        Basic navigation helper function with failure protection.
+        Mengeksekusi perintah dari AI.
+        Contoh input action: {"type": "click", "selector": "#apply-btn"}
         """
-        async with self.get_context() as context:
-            page = await context.new_page()
-            try:
-                # Timeout 30 seconds
-                await page.goto(url, wait_until="networkidle", timeout=30000)
-                return await page.title()
-            except Exception as e:
-                # DoD: Screenshot on failure
-                path = await self.take_failure_screenshot(page, task_id)
-                print(f"[BROWSER ERROR] Task {task_id} failed. Evidence: {path}")
-                raise e
+        act_type = action.get("type")
+        selector = action.get("selector")
+
+        if act_type == "click":
+            await page.click(selector, delay=random.randint(200, 600))
+        elif act_type == "type":
+            await self.human_type(page, selector, action.get("value", ""))
+        elif act_type == "wait":
+            await page.wait_for_timeout(action.get("ms", 2000))
+
+    async def human_type(self, page: Page, selector: str, text: str):
+        await page.focus(selector)
+        for char in text:
+            await page.type(selector, char, delay=random.randint(50, 150))

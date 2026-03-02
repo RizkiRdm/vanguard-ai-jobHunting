@@ -88,3 +88,19 @@ class VanguardAI:
         decision = json.loads(json_match.group(0))
         self.log.info("ai_decision_made", action=decision.get("action"))
         return decision
+
+    async def solve_questionnaire(
+        self, screenshot_path: str, user_profile: dict
+    ) -> dict:
+        """
+        Menganalisis screenshot form LinkedIn dan memberikan jawaban
+        berdasarkan data profesional user.
+        """
+        goal = f"""
+        Analyze this job application form. 
+        User Profile Data: {user_profile}
+        Task: Identify the questions and provide the most suitable answers.
+        Output: Return a list of actions (type, click, select) with the corresponding values.
+        """
+        # Gunakan analyze_screen yang sudah ada
+        return await self.analyze_screen(screenshot_path, goal)
