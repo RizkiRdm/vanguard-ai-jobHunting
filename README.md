@@ -1,32 +1,29 @@
-# 🛡️ Vanguard: Autonomous AI Job Hunting Copilot
+# 🛡️ Vanguard: Autonomous AI Job Hunting API
 
-Vanguard is a high-performance, **Autonomous AI Agent** designed to bridge the gap between job seekers and automated recruitment systems (ATS). Built with a **Modular Monolith Architecture**, Vanguard doesn't just find jobs; it acts as a "Digital Twin" to navigate, analyze, and apply for roles autonomously.
+Vanguard is a high-performance **Backend API** designed as an autonomous agent to bridge the gap between job seekers and automated recruitment systems. Built with a **Modular MVC / Asynchronous Architecture**, Vanguard acts as a "Digital Twin" to navigate, analyze, and apply for roles via headless browsers.
 
-## 🏗️ System Architecture
+## 🏗️ Technical Architecture
+Developed with **Clean Architecture** and **Asynchronous I/O** at its core:
+- **Core Engine:** FastAPI for high-concurrency request handling.
+- **Asynchronous Processing:** Leveraging Python's `asyncio` for non-blocking browser interactions and AI reasoning loops.
+- **Agentic Logic:** A "Reasoning Loop" (Observe -> Think -> Act) powered by **Google Gemini AI** and **Playwright**.
+- **Persistence Layer:** PostgreSQL with **Tortoise ORM**, implementing both Pessimistic and Optimistic locking to handle race conditions during task execution.
 
-This project follows **Clean Architecture** principles to ensure long-term scalability and maintainability, making it ready to transition from a personal tool to a multi-user SaaS.
+## 🔐 Security Framework (Zero Trust)
+- **Malware Scanning:** Integrated **ClamAV** for scanning uploaded documents.
+- **Data Protection:** **AES-256 Encryption** for sensitive portal credentials and JWT for stateless authentication.
+- **Isolated Execution:** Sandboxed directory handling for file extractions.
 
-### 🧩 Key Layers:
-- **Agentic Layer (Playwright + LLM):** An autonomous "Reasoning Loop" (Observe -> Think -> Act) that controls a headless browser.
-- **Service/Business Layer:** Encapsulated logic for resume tailoring, skill extraction, and job matching.
-- **Data Access Layer (SQLAlchemy):** Decoupled repository pattern supporting 3NF normalized schemas for business data.
-- **Technical/Audit Layer:** Dedicated logging for LLM token usage, execution trails, and system health monitoring.
-
-## 🗄️ Database Design (3NF)
-
-The system utilizes two distinct logical schemas:
-1. **Business Schema:** High normalization (3rd Normal Form) for `Users`, `Profiles`, `Experiences`, and `Skills` to ensure data integrity and query performance.
-2. **Technical Schema:** Optimized for high-write throughput (1NF/2NF) to handle `Agent_Tasks`, `LLM_Usage_Logs`, and `Execution_Audit_Trails`.
-
-## 🤖 Agentic Workflow (LLAD)
-
-Vanguard's agent operates using **Tiered Intelligence**:
-- **Scanning (Fast/Cheap):** GPT-4o-mini analyzes DOM structures and performs basic navigation.
-- **Decision Making (Reasoning):** Claude 3.5 / GPT-4o evaluates job relevancy and crafts tailored application responses.
-- **Action (Playwright):** Human-like interactions (delays, mouse movement) to minimize bot detection.
+## 🛠️ Tech Stack
+* **Language:** Python 3.10+ (Core), Go (Familiar)
+* **Framework:** FastAPI
+* **Database:** PostgreSQL
+* **ORM:** Tortoise ORM
+* **Automation:** Playwright
+* **AI Integration:** Google Gemini SDK
+* **Security:** ClamAV, AES-256
 
 ## 📁 Project Structure
-
 ``` tree
 vanguard-app/
 ├── core/                       # Shared Engine
@@ -49,25 +46,3 @@ vanguard-app/
 ├── main.py                     # App Entry Point
 └── .env.example
 ```
-
-## 🛠️ Tech Stack
-
-* **Language:** Python 3.10+
-* **Backend Framework:** FastAPI
-* **Documentation:** swagger
-* **ORM:** Tortoise ORM
-* **Malware Scanning:** ClamAV
-* **Automation:** Playwright
-* **Database:** PostgreSQL
-* **AI Integration:** Gemini AI SDK
-* **Validation:** Pydantic v2
-* **Security:** AES-256, JWT, OAuth
-
-## 🚀 Future Roadmap
-
-* [ ] **IP Rotation:** Proxy integration for high-volume job scouting.
-* [ ] **Advanced Human-in-the-loop:** Mobile notifications for final submission approval.
-
----
-
->*Developed with a focus on Scalability, Security, and Efficiency.*
