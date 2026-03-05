@@ -40,9 +40,9 @@ async def test_structured_logging_and_token_audit(capsys):
         # Langsung cek DB, tidak perlu sleep karena prosesnya sudah sinkron (await)
         log_entry = await LLMUsageLog.filter(user_id=user_test_id).first()
 
-        assert (
-            log_entry is not None
-        ), f"Database record missing for user_id: {user_test_id}"
+        assert log_entry is not None, (
+            f"Database record missing for user_id: {user_test_id}"
+        )
         assert log_entry.total_tokens == 150
         assert log_entry.model_name == "gemini-1.5-flash"
 

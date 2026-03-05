@@ -47,9 +47,9 @@ async def test_pessimistic_locking_prevents_double_claim():
         claimed_tasks = [r for r in results if r is not None]
 
         # One worker claims it, the other gets None
-        assert (
-            len(claimed_tasks) == 1
-        ), f"Error: {len(claimed_tasks)} workers claimed the task."
+        assert len(claimed_tasks) == 1, (
+            f"Error: {len(claimed_tasks)} workers claimed the task."
+        )
         assert claimed_tasks[0].id == task.id
 
         # Verify final state in DB

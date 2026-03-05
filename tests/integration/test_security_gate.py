@@ -35,7 +35,7 @@ def test_scenario_c_rate_limit_abuse(client):
     # Request 1 sampai 10: Harus Berhasil (200)
     for i in range(10):
         response = client.post("/agent/scrape")
-        assert response.status_code == 200, f"Request ke-{i+1} gagal"
+        assert response.status_code == 200, f"Request ke-{i + 1} gagal"
 
     # Request 11: Harus Gagal (429)
     response = client.post("/agent/scrape")
