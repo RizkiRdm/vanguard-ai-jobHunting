@@ -6,57 +6,52 @@ from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any
 
 from playwright.async_api import async_playwright, Page, BrowserContext, Browser
+from core.custom_logging import logger
 
 
 class BrowserManager:
     def __init__(self, headless: bool = True):
         self.headless = headless
+        self.log = logger.bind(service="browser_manager")
         self.session_dir = Path("storage/sessions")
         self.screenshot_dir = Path("storage/screenshots")
 
-        # Ensure directories exist
+        # Ensure critical directories exist
         self.session_dir.mkdir(parents=True, exist_ok=True)
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
 
-    async def _stealth_js(self, page: Page):
-        """Injects advanced JavaScript to bypass basic automation detection."""
+    async def _inject_stealth(self, page: Page):
+        """
+        Injects advanced evasion scripts to hide Playwright's automation signature.
+        """
         await page.add_init_script(
             """
-            // Overwrite the transparency of the webdriver property
+            // Hide webdriver property
             Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
             
+            // Mock Chrome runtime
+            window.chrome = { runtime: {} };
+
             // Mock languages and plugins
             Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
             Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
 
-            // Fix for Chrome-based detection
-            window.chrome = { runtime: {} };
+            // Fix for hardware concurrency to look like a standard consumer laptop
+            Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
         """
         )
 
-    async def load_session_state(self, user_id: str) -> Optional[str]:
-        """Checks if a session file exists for the user and returns the path."""
-        session_file = self.session_dir / f"{user_id}.json"
-        if session_file.exists():
-            return str(session_file)
-        return None
-
-    async def save_session_state(self, context: BrowserContext, user_id: str):
-        """Persists the current browser cookies and local storage to disk."""
-        try:
-            session_file = self.session_dir / f"{user_id}.json"
-            await context.storage_state(path=str(session_file))
-        except Exception as e:
-            print(f"[BROWSER] Failed to save session for {user_id}: {e}")
+    async def _get_session_path(self, user_id: str) -> Path:
+        """Helper to get standardized session file path."""
+        return self.session_dir / f"auth_{user_id}.json"
 
     @asynccontextmanager
-    async def get_context(self, user_id: str = None, load_session: bool = True):
+    async def get_context(self, user_id: Optional[str] = None):
         """
-        Creates a stateful browser context.
-        If user_id is provided, it attempts to load/save session cookies.
+        Context manager for browser sessions.
+        Handles persistent state (cookies/storage) automatically.
         """
         async with async_playwright() as p:
-            # High-level launch arguments for stability and stealth
             browser = await p.chromium.launch(
                 headless=self.headless,
                 args=[
@@ -66,62 +61,80 @@ class BrowserManager:
                 ],
             )
 
-            # Randomize dynamic fingerprints
-            width = random.randint(1280, 1440)
-            height = random.randint(800, 900)
-
-            context_kwargs = {
-                "viewport": {"width": width, "height": height},
-                "user_agent": f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{random.randint(110, 122)}.0.0.0 Safari/537.36",
+            # Setup context arguments
+            context_args = {
+                "viewport": {"width": 1280, "height": 800},
+                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
                 "locale": "en-US",
-                "timezone_id": "Asia/Jakarta",
+                "timezone_id": "UTC",
             }
 
             # Load existing session if available
-            if user_id and load_session:
-                session_path = await self.load_session_state(user_id)
-                if session_path:
-                    context_kwargs["storage_state"] = session_path
+            if user_id:
+                session_path = await self._get_session_path(user_id)
+                if session_path.exists():
+                    context_args["storage_state"] = str(session_path)
+                    self.log.info("session_loaded", user_id=user_id)
 
-            context = await browser.new_context(**context_kwargs)
+            context = await browser.new_context(**context_args)
+
+            # Create a default page and apply stealth
+            # Note: Init scripts must be applied to the context to affect all pages
+            await self._inject_stealth(context)
 
             try:
                 yield context
-            finally:
-                # Critical: Save session state before closing
-                if user_id:
-                    await self.save_session_state(context, user_id)
 
+                # Auto-save session state on successful close if user_id is provided
+                if user_id:
+                    await context.storage_state(
+                        path=str(await self._get_session_path(user_id))
+                    )
+                    self.log.info("session_saved", user_id=user_id)
+
+            except Exception as e:
+                self.log.error("browser_context_error", error=str(e))
+                raise
+            finally:
                 await context.close()
                 await browser.close()
 
-    async def human_type(self, page: Page, selector: str, text: str):
-        """Types text with variable delays and occasional 'human' mistakes."""
-        await page.wait_for_selector(selector, state="visible")
+    async def human_type(
+        self, page: Page, selector: str, text: str, delay_range: tuple = (60, 180)
+    ):
+        """
+        Types text into an element with variable delays and simulated human rhythm.
+        """
+        await page.wait_for_selector(selector, state="visible", timeout=10000)
         await page.focus(selector)
 
         for char in text:
-            # Simulate slight delay between characters
-            await page.type(selector, char, delay=random.randint(40, 120))
+            await page.type(selector, char, delay=random.randint(*delay_range))
 
-            # 2% chance of a "mistake" (typing a random char then backspacing)
-            if random.random() < 0.02:
-                await page.keyboard.press("KeyZ")  # Random char
-                await asyncio.sleep(random.uniform(0.1, 0.3))
-                await page.keyboard.press("Backspace")
+            # 1% chance of a "thought pause" between words or characters
+            if random.random() < 0.01:
+                await asyncio.sleep(random.uniform(0.5, 1.2))
 
     async def take_screenshot(self, page: Page, name: str) -> str:
-        """Captures a screenshot for AI analysis or error logging."""
+        """
+        Captures a screenshot for AI vision analysis.
+        Returns the absolute path to the file.
+        """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{name}_{timestamp}.png"
-        path = self.screenshot_dir / filename
-        await page.screenshot(path=str(path))
-        return str(path)
+        file_path = self.screenshot_dir / f"{name}_{timestamp}.png"
+        await page.screenshot(path=str(file_path), full_page=False)
+        return str(file_path.absolute())
 
-    async def upload_file(self, page: Page, selector: str, file_path: Path):
-        """Safe file upload helper."""
-        if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
-
-        await page.set_input_files(selector, str(file_path))
-        await asyncio.sleep(random.uniform(1.0, 2.0))  # Wait for upload processing
+    async def safe_click(self, page: Page, selector: str):
+        """
+        Click with pre-wait and slight randomization of the click coordinates.
+        """
+        await page.wait_for_selector(selector, state="visible")
+        box = await page.locator(selector).bounding_box()
+        if box:
+            # Click near the center but slightly offset
+            x = box["x"] + box["width"] / 2 + random.uniform(-5, 5)
+            y = box["y"] + box["height"] / 2 + random.uniform(-5, 5)
+            await page.mouse.click(x, y)
+        else:
+            await page.click(selector)

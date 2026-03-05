@@ -1,0 +1,41 @@
+# Configuration for Automated Job Application Sites
+linkedin:
+  # Navigation & Auth
+  base_url: "https://www.linkedin.com/jobs"
+  login_url: "https://www.linkedin.com/checkpoint/lg/login"
+  
+  # Selectors for Orchestrator (Actions)
+  selectors:
+    # Application Buttons
+    apply_button: "button.jobs-apply-button"
+    next_button: "button[aria-label*='next'], button[aria-label*='Continue']"
+    submit_button: "button[aria-label*='Submit']"
+    review_button: "button[aria-label*='Review']"
+    form_container: ".jobs-easy-apply-content, .jobs-base-form"
+    
+    # Scraping Elements (Fallback for Scraper)
+    job_title: "h1.t-24.t-bold"
+    company_name: ".job-details-company-name, .jobs-unified-top-card__company-name"
+    location: ".job-details-location, .jobs-unified-top-card__bullet"
+    
+    # Close/Dismiss
+    close_dialog: "button[aria-label='Dismiss']"
+
+  # Anti-Bot & Flow Settings
+  settings:
+    typing_delay_range: [80, 250]      # Delay per karakter (ms)
+    mouse_move_chance: 0.15           # Peluang gerak mouse random
+    max_steps: 20                     # Maksimal interaksi per apply
+    wait_after_page_load: 3000        # Milidetik
+
+indeed:
+  base_url: "https://id.indeed.com"
+  selectors:
+    apply_button: "button#indeedApplyButton"
+    next_button: "button.icl-Button--primary"
+    submit_button: "button[type='submit']"
+    job_title: "h1.jobsearch-JobInfoHeader-title"
+    company_name: "div[data-company-name='true']"
+  settings:
+    typing_delay_range: [50, 150]
+    max_steps: 12

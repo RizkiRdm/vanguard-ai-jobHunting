@@ -28,6 +28,7 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "python-jose>=3.5.0",
     "python-multipart>=0.0.22",
+    "pyyaml>=6.0.3",
     "ruff>=0.15.4",
     "sqlalchemy>=2.0.46",
     "structlog>=25.5.0",
