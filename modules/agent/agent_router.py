@@ -1,5 +1,4 @@
 import uuid
-<<<<<<< HEAD
 from typing import Dict, Any
 from fastapi import APIRouter, Depends, Response, HTTPException
 from fastapi.responses import FileResponse
@@ -7,12 +6,6 @@ from core.security import get_current_user_from_cookie, create_access_token
 from core.browser import BrowserManager
 from modules.agent.models import AgentTask, TaskStatus, LLMUsageLog
 from core.custom_logging import logger
-=======
-
-from fastapi import APIRouter, Depends, Response
-from core.security import get_current_user_from_cookie, create_access_token
-from modules.agent.models import AgentTask, TaskStatus
->>>>>>> 8a68e69 (refactor(core): improve scraping reliability and mock stability)
 
 router = APIRouter(prefix="/agent", tags=["Agent Automation"])
 log = logger.bind(service="agent_router")
@@ -48,7 +41,6 @@ async def capture_session(user_id: str = Depends(get_current_user_from_cookie)):
 
 
 @router.post("/scrape")
-<<<<<<< HEAD
 async def trigger_discovery(
     target_url: str, user_id: str = Depends(get_current_user_from_cookie)
 ):
@@ -109,20 +101,3 @@ async def stop_task(task_id: str, user_id: str = Depends(get_current_user_from_c
         task.error = "Cancelled by user"
         await task.save()
     return {"status": "stopped"}
-=======
-async def scrape_web(
-    target_url: str, user_id: str = Depends(get_current_user_from_cookie)
-):
-    task_id = str(uuid.uuid4())
-
-    # Masukkan ke antrean task (DISCOVERY)
-    await AgentTask.create(
-        id=task_id, user_id=user_id, task_type="DISCOVERY", status=TaskStatus.QUEUED
-    )
-
-    return {
-        "status": "queued",
-        "task_id": task_id,
-        "message": "Scraping task initiated via Gemini AI.",
-    }
->>>>>>> 8a68e69 (refactor(core): improve scraping reliability and mock stability)

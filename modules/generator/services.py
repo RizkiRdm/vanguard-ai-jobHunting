@@ -1,62 +1,59 @@
-from modules.generator.models import TailoredDocument
+import uuid
 from core.ai_agent import VanguardAI
+from modules.generator.models import TailoredDocument
+from core.custom_logging import logger
+
+log = logger.bind(service="generator_service")
 
 
 async def generate_tailored_document(
-<<<<<<< HEAD
-    user_id: str, job_context: str, profile_summary: str, doc_type: str = "CV"
-=======
-    user_id: str, task_id: str, job_context: str, doc_type: str = "CV"
->>>>>>> 8a68e69 (refactor(core): improve scraping reliability and mock stability)
-):
+    user_id: str,
+    task_id: str,
+    job_context: str,
+    profile_summary: str,
+    doc_type: str = "CV",
+) -> TailoredDocument:
     """
-    Menggunakan Gemini untuk membuat CV atau Cover Letter yang disesuaikan dengan job description.
+    Uses Gemini to create a highly optimized career document based on job context and user profile.
     """
     ai = VanguardAI()
 
     prompt = f"""
-You are a professional career assistant.
+    Role: Professional Career Consultant
+    Task: Create a tailored {doc_type} for the following job.
+    
+    [USER PROFILE SUMMARY]
+    {profile_summary}
+    
+    [JOB DESCRIPTION]
+    {job_context}
+    
+    Guidelines:
+    - Use a professional, high-impact tone.
+    - Match user skills directly with job requirements (ATS Optimization).
+    - Highlight measurable achievements.
+    - Output ONLY the {doc_type} content without any conversational text.
+    """
 
-Task:
-Create a tailored {doc_type} specifically optimized for the job described below.
+    try:
+        # Generate content using the new SDK syntax
+        response = ai.client.models.generate_content(model=ai.model_id, contents=prompt)
 
-Job Description:
-{job_context}
+        if not response.text:
+            raise ValueError("AI returned empty content")
 
-<<<<<<< HEAD
-User Profile Summary:
-{profile_summary}
+        # Create and persist the document
+        doc = await TailoredDocument.create(
+            id=uuid.uuid4(),
+            user_id=uuid.UUID(user_id),
+            task_id=uuid.UUID(task_id),
+            doc_type=doc_type,
+            content=response.text,
+        )
 
-=======
->>>>>>> 8a68e69 (refactor(core): improve scraping reliability and mock stability)
-Requirements:
-- Use a professional and confident tone.
-- Align skills and experiences directly with the job requirements.
-- Highlight measurable achievements where possible.
-- Avoid generic statements.
-- Optimize for ATS (use relevant keywords from the job description naturally).
-- Keep it concise and impactful.
-- Do not fabricate experience that is not implied by the provided context.
+        log.info("document_generated", doc_id=str(doc.id), type=doc_type)
+        return doc
 
-Output only the final {doc_type} content.
-Do not include explanations.
-"""
-
-    # Generate content via LLM
-    response = await ai.client.models.generate_content(
-        model=ai.model_id, contents=prompt
-    )
-    tailored_content = response.text
-
-<<<<<<< HEAD
-    # Save to DB
-    doc = await TailoredDocument.create(
-        user_id=user_id, doc_type=doc_type, content=tailored_content
-=======
-    # Simpan ke DB
-    doc = await TailoredDocument.create(
-        task_id=task_id, doc_type=doc_type, content=tailored_content
->>>>>>> 8a68e69 (refactor(core): improve scraping reliability and mock stability)
-    )
-
-    return doc
+    except Exception as e:
+        log.error("generation_failed", error=str(e))
+        raise
