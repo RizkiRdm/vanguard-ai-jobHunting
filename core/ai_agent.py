@@ -2,18 +2,13 @@ import json
 import os
 import re
 from typing import Dict, Any, Optional
+import uuid
 
-import google.genai as genai
+from google import genai
 from core.custom_logging import logger
 from dotenv import load_dotenv
 from modules.agent.models import LLMUsageLog
 from PIL import Image
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
 
 load_dotenv()
 
@@ -24,14 +19,21 @@ class VanguardAI:
         if not api_key:
             raise ValueError("GEMINI_API_KEY not found in environment variables")
 
-        # Use stable model version
+        # Initialize the new Google Gen AI Client
         self.client = genai.Client(api_key=api_key)
-        self.model_id = "gemini-1.5-flash"
+
+        self.model_id = "gemini-2.5-flash"
         self.log = logger.bind(service="vanguard-ai")
 
     async def _log_token_usage(self, response: Any, user_id: str | None = None) -> None:
-        """Securely logs token usage for auditing and billing."""
+        """Logs token usage to database for auditing."""
         try:
+            try:
+                valid_user_id = uuid.UUID(str(user_id)) if user_id else None
+            except ValueError:
+                self.log.warning("invalid_uuid_skipping_audit", provided_id=user_id)
+                return
+            # According to SDK docs, usage is in usage_metadata
             usage = response.usage_metadata
             await LLMUsageLog.create(
                 user_id=user_id,
@@ -44,31 +46,18 @@ class VanguardAI:
         except Exception as e:
             self.log.error("token_audit_failed", error=str(e))
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception),
-    )
-    async def _call_gemini_api(self, prompt: str, image: Image.Image) -> Any:
-        """Wrapper for API calls with built-in retry logic."""
-        return await self.client.models.generate_content(
-            model=self.model_id, contents=[prompt, image]
-        )
-
     def _clean_json_response(self, raw_text: str) -> Dict[str, Any]:
-        """Robustly extracts and cleans JSON from LLM response."""
+        """Robustly extracts JSON from LLM response text."""
         try:
-            # Remove markdown code blocks if present
+            # Remove markdown formatting if present
             clean_text = re.sub(r"```json\s?|\s?```", "", raw_text).strip()
-            # Extract only the first JSON object found
             json_match = re.search(r"(\{.*\})", clean_text, re.DOTALL)
             if not json_match:
-                raise ValueError("Malformed AI Response: No JSON object found")
-
+                raise ValueError("No JSON block found in response")
             return json.loads(json_match.group(1))
         except Exception as e:
             self.log.error("json_parse_error", raw_text=raw_text, error=str(e))
-            return {"action": "fail", "reason": "Failed to parse AI response"}
+            return {"action": "fail", "reason": "Parsing error"}
 
     async def analyze_screen(
         self,
@@ -78,57 +67,45 @@ class VanguardAI:
         history: Optional[list] = None,
     ) -> Dict[str, Any]:
         """
-        State-aware ReAct analysis.
-        'history' allows the AI to know what it did previously to avoid loops.
+        ReAct implementation using the latest Google Gen AI SDK.
         """
         try:
             if not os.path.exists(screenshot_path):
-                raise FileNotFoundError(f"Screenshot not found at {screenshot_path}")
+                raise FileNotFoundError(f"Screenshot not found: {screenshot_path}")
 
+            # Load image for multimodal input
             image = Image.open(screenshot_path)
 
-            # System instructions for ReAct behavior
-            system_prompt = f"""
-            You are an expert Job Application Agent.
-            GOAL: {goal}
+            # Structured prompt for ReAct
+            prompt = f"""
+            Task: {goal}
+            Current History: {history if history else 'First step'}
             
-            PREVIOUS ACTIONS: {history if history else 'None'}
-            
-            Instructions:
-            1. Analyze the screenshot provided.
-            2. Identify the current state of the application form.
-            3. Choose the NEXT logical action from: [CLICK, TYPE, SELECT, UPLOAD, AWAIT_USER, COMPLETE].
-            4. If the previous action failed or the screen hasn't changed, try a different approach.
-            
-            Return ONLY a valid JSON object:
+            Analyze the screenshot and return ONLY a JSON object:
             {{
-                "thought": "Brief explanation of what you see and why this action is chosen",
-                "action": "CLICK|TYPE|SELECT|UPLOAD|AWAIT_USER|COMPLETE",
-                "selector": "Playwright-compatible CSS or Text selector",
-                "value": "Value to type or select (if applicable)",
-                "confidence": 0.0-1.0
+                "thought": "Reasoning about current state",
+                "action": "CLICK|TYPE|SELECT|UPLOAD|COMPLETE|AWAIT_USER",
+                "selector": "CSS selector if applicable",
+                "value": "Value to input if applicable",
+                "confidence": 0.95
             }}
             """
 
-            response = await self._call_gemini_api(system_prompt, image)
-            await self._log_token_usage(response, user_id)
-
-            decision = self._clean_json_response(response.text)
-            self.log.info(
-                "ai_decision",
-                thought=decision.get("thought"),
-                action=decision.get("action"),
+            # CALL API using the new SDK syntax (from README.md)
+            # We use list [prompt, image] for multimodal
+            response = self.client.models.generate_content(
+                model=self.model_id, contents=[prompt, image]
             )
 
-            return decision
+            if not response or not response.text:
+                raise ValueError("API returned empty response")
+
+            # Usage Logging
+            await self._log_token_usage(response, user_id)
+
+            # Parsing
+            return self._clean_json_response(response.text)
 
         except Exception as e:
             self.log.error("analysis_critical_failure", error=str(e))
             return {"action": "fail", "reason": str(e)}
-
-    async def solve_questionnaire(
-        self, screenshot_path: str, user_profile: dict
-    ) -> dict:
-        """Specific tool for questionnaire handling using the ReAct loop."""
-        goal = f"Fill the application form using this user profile: {json.dumps(user_profile)}"
-        return await self.analyze_screen(screenshot_path, goal)
