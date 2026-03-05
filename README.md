@@ -27,7 +27,7 @@ Developed with **Clean Architecture** and **Asynchronous I/O** at its core:
 ``` tree
 vanguard-app/
 ├── core/                       # Shared Engine
-│   ├── database.py             # SQLAlchemy Async + Optimistic Lock Config
+│   ├── database.py             # Tortoise Async + Optimistic Lock Config
 │   ├── security.py             # AES-256 & PII Masking
 │   ├── ai_engine.py            # Gemini SDK + Phoenix Tracing
 │   ├── browser.py              # Playwright Worker Setup
