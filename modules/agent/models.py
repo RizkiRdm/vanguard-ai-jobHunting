@@ -4,10 +4,10 @@ from enum import Enum
 
 class TaskStatus(str, Enum):
     DISCOVERY = "DISCOVERY"
-    APPLYING = "APPLYING"
+    AUTOMATED_APPLY = "AUTOMATED_APPLY"
     QUEUED = "QUEUED"
     RUNNING = "RUNNING"
-    AWAITING_USER = "AWAITING_USER"
+    AWAITING_USER = "AWAIT_USER"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
@@ -18,11 +18,16 @@ class AgentTask(models.Model):
         "models.User", related_name="tasks", on_delete=fields.SET_NULL, null=True
     )
     task_type = fields.CharField(max_length=20)
+    metadata = fields.JSONField(default={})
     status = fields.CharEnumField(TaskStatus, default=TaskStatus.QUEUED)
     subjective_question = fields.TextField(null=True)
     error_log = fields.TextField(null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
+    parent_id = fields.UUIDField(null=True, db_index=True)
+    session_data_path = fields.CharField(max_length=255, null=True)
+    last_url = fields.TextField(null=True)
+    last_screenshot_path = fields.CharField(max_length=255, null=True)
 
     class Meta:
         table = "agent_tasks"
@@ -30,7 +35,6 @@ class AgentTask(models.Model):
 
 class LLMUsageLog(models.Model):
     id = fields.UUIDField(primary_key=True)
-    # Ini boleh tetap CharField atau FK, terserah pilihan lo
     user = fields.ForeignKeyField("models.User", related_name="llm_logs", null=True)
     prompt_tokens = fields.IntField()
     completion_tokens = fields.IntField()

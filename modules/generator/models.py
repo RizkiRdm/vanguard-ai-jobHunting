@@ -37,6 +37,7 @@ ScrapedJob_Pydantic = pydantic_model_creator(ScrapedJob, name="ScrapedJob")
 
 class TailoredDocument(models.Model):
     id = fields.UUIDField(primary_key=True)
+    user_id = fields.UUIDField(db_index=True)  # FK ke Users
     task_id = fields.UUIDField(db_index=True)  # Relasi ke AgentTask
     doc_type = fields.CharField(max_length=50)  # 'CV' atau 'COVER_LETTER'
     content = fields.TextField()  # Hasil generate dari LLM

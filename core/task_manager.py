@@ -9,11 +9,14 @@ async def claim_next_task() -> AgentTask | None:
     Ensures no double-processing in a concurrent environment.
     """
     async with in_transaction() as conn:
-        # SQL: SELECT ... FOR UPDATE SKIP LOCKED
-        # 'SKIP LOCKED' allows other workers to immediately skip this row
-        # and look for the next available task instead of waiting.
+        # Finding parents that are NOT completed
+        active_parents = await AgentTask.filter(
+            status__in=[TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.AWAITING_USER]
+        ).values_list("id", flat=True)
+
         task = (
             await AgentTask.filter(status=TaskStatus.QUEUED)
+            .exclude(parent_id__in=active_parents)
             .order_by("created_at")
             .limit(1)
             .select_for_update(skip_locked=True)
@@ -28,7 +31,24 @@ async def claim_next_task() -> AgentTask | None:
     return None
 
 
-async def update_task_status(task_id: uuid.UUID, status: TaskStatus, error: str = None):
+async def create_sub_task(
+    parent_task_id: str, user_id: str, task_type: str, metadata: dict
+) -> AgentTask:
+    """Creates a new sub-task linked to a parent task."""
+    task = await AgentTask.create(
+        id=uuid.uuid4(),
+        parent_id=parent_task_id,
+        user_id=user_id,
+        task_type=task_type,
+        status=TaskStatus.QUEUED,
+        metadata=metadata,
+    )
+    return task
+
+
+async def update_task_status(
+    task_id: uuid.UUID | str, status: TaskStatus, error: str = None
+):
     """Updates the final state of the task."""
     task = await AgentTask.get(id=task_id)
     task.status = status

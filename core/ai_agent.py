@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from pathlib import Path
+from typing import Dict, Any, Optional
 
 import google.genai as genai
 from core.custom_logging import logger
@@ -24,12 +24,13 @@ class VanguardAI:
         if not api_key:
             raise ValueError("GEMINI_API_KEY not found in environment variables")
 
+        # Use stable model version
         self.client = genai.Client(api_key=api_key)
         self.model_id = "gemini-1.5-flash"
         self.log = logger.bind(service="vanguard-ai")
 
-    async def _log_token_usage(self, response: any, user_id: str | None = None) -> None:
-        # Save token usage to database
+    async def _log_token_usage(self, response: Any, user_id: str | None = None) -> None:
+        """Securely logs token usage for auditing and billing."""
         try:
             usage = response.usage_metadata
             await LLMUsageLog.create(
@@ -48,59 +49,86 @@ class VanguardAI:
         wait=wait_exponential(multiplier=1, min=2, max=10),
         retry=retry_if_exception_type(Exception),
     )
-    async def _call_gemini_api(self, prompt: str, image: Image.Image) -> any:
-        # Execute remote GenAI request
+    async def _call_gemini_api(self, prompt: str, image: Image.Image) -> Any:
+        """Wrapper for API calls with built-in retry logic."""
         return await self.client.models.generate_content(
             model=self.model_id, contents=[prompt, image]
         )
 
-    async def analyze_screen(
-        self, screenshot_path: str, goal: str, user_id: str | None = None
-    ) -> dict:
-        # Main analysis flow
-        self.log.info("ai_analysis_started", user_id=user_id)
-
+    def _clean_json_response(self, raw_text: str) -> Dict[str, Any]:
+        """Robustly extracts and cleans JSON from LLM response."""
         try:
-            # Load image and prompt
+            # Remove markdown code blocks if present
+            clean_text = re.sub(r"```json\s?|\s?```", "", raw_text).strip()
+            # Extract only the first JSON object found
+            json_match = re.search(r"(\{.*\})", clean_text, re.DOTALL)
+            if not json_match:
+                raise ValueError("Malformed AI Response: No JSON object found")
+
+            return json.loads(json_match.group(1))
+        except Exception as e:
+            self.log.error("json_parse_error", raw_text=raw_text, error=str(e))
+            return {"action": "fail", "reason": "Failed to parse AI response"}
+
+    async def analyze_screen(
+        self,
+        screenshot_path: str,
+        goal: str,
+        user_id: str = None,
+        history: Optional[list] = None,
+    ) -> Dict[str, Any]:
+        """
+        State-aware ReAct analysis.
+        'history' allows the AI to know what it did previously to avoid loops.
+        """
+        try:
+            if not os.path.exists(screenshot_path):
+                raise FileNotFoundError(f"Screenshot not found at {screenshot_path}")
+
             image = Image.open(screenshot_path)
-            prompt_template = Path("prompts/agent_prompt.md").read_text()
-            prompt = prompt_template.replace("{{goal}}", goal)
 
-            # API Execution
-            response = await self._call_gemini_api(prompt, image)
+            # System instructions for ReAct behavior
+            system_prompt = f"""
+            You are an expert Job Application Agent.
+            GOAL: {goal}
+            
+            PREVIOUS ACTIONS: {history if history else 'None'}
+            
+            Instructions:
+            1. Analyze the screenshot provided.
+            2. Identify the current state of the application form.
+            3. Choose the NEXT logical action from: [CLICK, TYPE, SELECT, UPLOAD, AWAIT_USER, COMPLETE].
+            4. If the previous action failed or the screen hasn't changed, try a different approach.
+            
+            Return ONLY a valid JSON object:
+            {{
+                "thought": "Brief explanation of what you see and why this action is chosen",
+                "action": "CLICK|TYPE|SELECT|UPLOAD|AWAIT_USER|COMPLETE",
+                "selector": "Playwright-compatible CSS or Text selector",
+                "value": "Value to type or select (if applicable)",
+                "confidence": 0.0-1.0
+            }}
+            """
 
-            # Deterministic logging (Wait for DB)
+            response = await self._call_gemini_api(system_prompt, image)
             await self._log_token_usage(response, user_id)
 
-            # Parsing
-            return self._parse_response(response.text)
+            decision = self._clean_json_response(response.text)
+            self.log.info(
+                "ai_decision",
+                thought=decision.get("thought"),
+                action=decision.get("action"),
+            )
+
+            return decision
 
         except Exception as e:
-            self.log.error("analysis_failed", error=str(e))
-            return {"action": "fail", "reasoning": str(e)}
-
-    def _parse_response(self, raw_text: str) -> dict:
-        # Extract JSON from response text
-        json_match = re.search(r"\{.*\}", raw_text, re.DOTALL)
-        if not json_match:
-            raise ValueError("No valid JSON found in model response")
-
-        decision = json.loads(json_match.group(0))
-        self.log.info("ai_decision_made", action=decision.get("action"))
-        return decision
+            self.log.error("analysis_critical_failure", error=str(e))
+            return {"action": "fail", "reason": str(e)}
 
     async def solve_questionnaire(
         self, screenshot_path: str, user_profile: dict
     ) -> dict:
-        """
-        Menganalisis screenshot form LinkedIn dan memberikan jawaban
-        berdasarkan data profesional user.
-        """
-        goal = f"""
-        Analyze this job application form. 
-        User Profile Data: {user_profile}
-        Task: Identify the questions and provide the most suitable answers.
-        Output: Return a list of actions (type, click, select) with the corresponding values.
-        """
-        # Gunakan analyze_screen yang sudah ada
+        """Specific tool for questionnaire handling using the ReAct loop."""
+        goal = f"Fill the application form using this user profile: {json.dumps(user_profile)}"
         return await self.analyze_screen(screenshot_path, goal)

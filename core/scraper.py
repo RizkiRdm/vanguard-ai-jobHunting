@@ -1,6 +1,6 @@
 import json
-from typing import List, Dict, Any
-from core.browser import BrowserManager
+import re
+from typing import List, Dict, Any, Optional
 from core.ai_agent import VanguardAI
 from core.custom_logging import logger
 from modules.generator.models import ScrapedJob
@@ -11,109 +11,108 @@ class JobScraper:
         self.ai = VanguardAI()
         self.log = logger.bind(service="job_scraper")
 
-    def _recursive_chunking(
-        self, text: str, max_chars: int = 4000, overlap: int = 200
-    ) -> List[str]:
-        """
-        Splits text into smaller chunks with overlap to maintain context.
-        """
-        chunks = []
-        start = 0
-        while start < len(text):
-            end = start + max_chars
-            chunks.append(text[start:end])
-            start += max_chars - overlap
-        return chunks
+    def _sanitize_content(self, text: str) -> str:
+        """Removes potential prompt injection patterns and excess noise."""
+        # Remove scripts, styles, and limit repetitive characters
+        sanitized = re.sub(r"<script_.*?>.*?</script>", "", text, flags=re.DOTALL)
+        # Basic defense: neutralizing command-like strings
+        forbidden_keywords = ["ignore previous", "system prompt", "as an admin"]
+        for kw in forbidden_keywords:
+            sanitized = sanitized.replace(kw, "[REDACTED]")
+        return sanitized.strip()
 
-    async def scrape_traditional(self, page) -> Dict[str, Any]:
-        """
-        Version 1: Traditional Scraping using CSS Selectors.
-        Fast, zero cost, but fragile to UI changes.
-        """
-        self.log.info("scraping_method_traditional")
+    def _extract_json_from_text(self, text: str) -> Optional[dict]:
+        """Robustly extracts JSON even if AI adds conversational text or markdown."""
         try:
-            # Contoh untuk LinkedIn/Generic
-            data = {
-                "job_title": await page.inner_text("h1") or "",
-                "company_name": await page.inner_text(".job-details-company-name")
-                or "",
-                "location": await page.inner_text(".job-details-location") or "",
-                "source_url": page.url,
-            }
-            return data
-        except Exception as e:
-            self.log.error("traditional_scraping_failed", error=str(e))
-            return {}
+            # Look for the first '{' and last '}'
+            match = re.search(r"(\{.*\})", text, re.DOTALL)
+            if match:
+                return json.loads(match.group(1))
+            return json.loads(text)
+        except (json.JSONDecodeError, ValueError):
+            return None
 
-    async def scrape_llm(self, page, user_id: str) -> Dict[str, Any]:
+    async def scrape_llm(self, page, user_id: str) -> List[Dict[str, Any]]:
         """
-        AI-Driven Scraping using existing VanguardAI client.
+        Advanced LLM-based scraping with injection protection and robust parsing.
         """
-        self.log.info("scraping_method_llm", user_id=user_id)
-
         raw_content = await page.evaluate("() => document.body.innerText")
-        chunks = self._recursive_chunking(raw_content)
-        target_content = chunks[0]
+        target_content = self._sanitize_content(
+            raw_content[:15000]
+        )  # Limit context window
 
         prompt = f"""
-You are a structured data extraction engine.
+        Extract job listing data from the provided text into a strict JSON format.
+        
+        Guidelines:
+        - Use ONLY information from the text.
+        - If a field is missing, use null.
+        - Requirements must be an array of strings.
+        
+        Desired JSON Structure:
+        {{
+            "job_title": string,
+            "company_name": string,
+            "location": string,
+            "employment_type": string,
+            "salary_range": string,
+            "job_description": string,
+            "requirements": [],
+            "source_url": "{page.url}",
+            "posted_date": string
+        }}
 
-Task:
-Extract job listing information from the provided content.
-
-STRICT RULES:
-- Return ONLY valid JSON.
-- Do NOT include explanations.
-- Do NOT include markdown.
-- Do NOT wrap in backticks.
-- Do NOT add extra fields.
-- If a field is not found, return null.
-- requirements must always be an array (empty list if none found).
-- Do not hallucinate missing information.
-
-JSON Schema:
-{{
-    "job_title": string | null,
-    "company_name": string | null,
-    "location": string | null,
-    "employment_type": string | null,
-    "salary_range": string | null,
-    "job_description": string | null,
-    "requirements": string[],
-    "source_url": "{page.url}",
-    "posted_date": string | null
-}}
-
-Extraction Guidelines:
-- Keep job_description concise but complete.
-- Normalize whitespace.
-- Remove duplicated text.
-- requirements should contain only clear qualification or skill statements.
-- Do not invent salary or dates.
-
-Content to parse:
-
-{target_content}
-
-Return JSON only.
-"""
+        Content to Parse:
+        ---
+        {target_content}
+        ---
+        Return ONLY valid JSON.
+        """
 
         try:
-            # Access the SDK client directly from VanguardAI to avoid adding new methods
+            # Call AI via the centralized Gemini client
             response = await self.ai.client.models.generate_content(
                 model=self.ai.model_id, contents=prompt
             )
 
-            extracted_data = json.loads(response.text)
+            if not response or not response.text:
+                raise ValueError("Empty response from AI model")
 
-            # Audit log using existing private method (optional but recommended)
+            extracted_data = self._extract_json_from_text(response.text)
+
+            if not extracted_data:
+                self.log.error("json_parsing_failed", raw_text=response.text[:100])
+                return []
+
+            # Token audit
             await self.ai._log_token_usage(response, user_id)
 
-            # Save to Database
-            await ScrapedJob.create(user_id=user_id, **extracted_data)
+            # Integrity Check: Ensure source_url is always present
+            extracted_data["source_url"] = page.url
 
-            return extracted_data
+            # Database Persistence
+            try:
+                await ScrapedJob.create(user_id=user_id, **extracted_data)
+                self.log.info(
+                    "job_saved_to_db", job_title=extracted_data.get("job_title")
+                )
+            except Exception as db_err:
+                self.log.warning("db_save_failed_but_returning_data", error=str(db_err))
+
+            return [extracted_data]
 
         except Exception as e:
-            self.log.error("llm_scraping_failed", error=str(e))
-            return {}  # This causes KeyError if not handled in tests
+            self.log.error("llm_scraping_critical_failure", error=str(e))
+            return []
+
+    async def scrape_traditional(self, page) -> Dict[str, Any]:
+        """Fallback method using standard CSS selectors."""
+        self.log.info("scraping_method_traditional")
+        # Implementation remains similar but with more robust null checking
+        return {
+            "job_title": (await page.inner_text("h1") or "Unknown").strip(),
+            "company_name": (
+                await page.inner_text(".job-details-company-name") or "Unknown"
+            ).strip(),
+            "source_url": page.url,
+        }

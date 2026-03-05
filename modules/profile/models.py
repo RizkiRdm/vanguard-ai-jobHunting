@@ -27,6 +27,7 @@ class UserProfile(models.Model):
     starter_cv_path = fields.CharField(max_length=512, null=True)
     summary = fields.TextField(null=True)
     target_role = fields.CharField(max_length=255, null=True)
+    expected_salary = fields.CharField(max_length=100, null=True)
 
     class Meta:
         table = "user_profiles"
