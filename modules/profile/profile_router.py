@@ -1,97 +1,68 @@
-import os
 import uuid
-import shutil
 from pathlib import Path
 from fastapi import APIRouter, File, HTTPException, UploadFile, Depends
+from tortoise.functions import Sum
 
-from modules.agent.models import AgentTask, TaskStatus
-from modules.profile.models import User
-from shared.schemas import ErrorResponse, PipelineResponse, UserProfileResponse
-from core.security import MalwareScanner
+from modules.agent.models import AgentTask, TaskStatus, LLMUsageLog
+from core.security import MalwareScanner, get_current_user_from_cookie
 from core.custom_logging import logger
 
-router = APIRouter(prefix="/profile", tags=["Profile"])
-STORAGE_DIR = Path("storage")
-STORAGE_DIR.mkdir(exist_ok=True)
+router = APIRouter(prefix="/profile", tags=["User Profile"])
+RESUME_DIR = Path("storage/resumes")
+RESUME_DIR.mkdir(parents=True, exist_ok=True)
 
 
-@router.get(
-    "/{user_id}",
-    response_model=UserProfileResponse,
-    responses={404: {"model": ErrorResponse}},
-)
-async def get_profile(user_id: str):
-    user = await User.get_or_none(id=user_id).prefetch_related("profile")
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    return UserProfileResponse.model_validate(user)
-
-
-@router.post("/upload-resume")
-async def upload_resume(
-    file: UploadFile = File(...), scanner: MalwareScanner = Depends()
+@router.post("/process-resume")
+async def upload_resume_and_apply(
+    file: UploadFile = File(...),
+    scanner: MalwareScanner = Depends(),
+    user_id: str = Depends(get_current_user_from_cookie),
 ):
-    """
-    Performs immediate security validation on uploaded resumes.
-    """
-    temp_path = STORAGE_DIR / f"validation_{uuid.uuid4()}_{file.filename}"
-
-    # Use context manager for safe file writing
-    with temp_path.open("wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    try:
-        # Blueprint Sec 2: Malware Scanning via VirusTotal
-        await scanner.verify_file_safety(str(temp_path))
-        return {"status": "clean", "filename": file.filename}
-    finally:
-        # Ensure temporary file is always removed
-        if temp_path.exists():
-            temp_path.unlink()
-
-
-@router.post(
-    "/process-pipeline",
-    response_model=PipelineResponse,
-    responses={400: {"model": ErrorResponse}, 403: {"model": ErrorResponse}},
-)
-async def trigger_pipeline(
-    user_id: str, file: UploadFile = File(...), scanner: MalwareScanner = Depends()
-):
-    """
-    Main entry point for the job application pipeline.
-    Validates security and queues the task for the background worker.
-    """
+    """Uploads resume, performs safety scan, and triggers auto-apply task."""
     task_id = str(uuid.uuid4())
-    # Worker expects file names to follow this specific pattern
-    file_path = STORAGE_DIR / f"temp_{task_id}.zip"
-
-    # 1. Persist the uploaded file to disk
-    content = await file.read()
-    file_path.write_bytes(content)
+    safe_name = f"{user_id}_{task_id}{Path(file.filename).suffix}"
+    file_path = RESUME_DIR / safe_name
 
     try:
-        # 2. Security Check (Non-negotiable requirement)
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
+
         await scanner.verify_file_safety(str(file_path))
 
-        # 3. Create Task Record with QUEUED status
-        # This will be picked up by the worker loop using SKIP LOCKED
         await AgentTask.create(
-            id=task_id, user_id=user_id, task_type="APPLYING", status=TaskStatus.QUEUED
+            id=task_id,
+            user_id=user_id,
+            task_type="APPLYING",
+            status=TaskStatus.QUEUED,
+            metadata={"resume_path": str(file_path)},
         )
-
-        logger.info("pipeline_task_queued", task_id=task_id, user_id=user_id)
-
-        return PipelineResponse(
-            status="queued",
-            task_id=task_id,
-            detail="File accepted. Background processing has started.",
-        )
+        return {"task_id": task_id, "status": "queued"}
 
     except Exception as e:
-        # Cleanup file if pre-queue validation fails
         if file_path.exists():
             file_path.unlink()
-        logger.error("pipeline_trigger_failed", error=str(e), user_id=user_id)
+        logger.error("upload_pipeline_failed", error=str(e))
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/stats")
+async def get_bot_statistics(user_id: str = Depends(get_current_user_from_cookie)):
+    """Calculates bot performance and AI cost efficiency for the user."""
+    total_applied = await AgentTask.filter(
+        user_id=user_id, status=TaskStatus.COMPLETED, task_type="APPLYING"
+    ).count()
+
+    usage = (
+        await LLMUsageLog.filter(user_id=user_id)
+        .annotate(total_tokens=Sum("total_tokens"))
+        .first()
+    )
+
+    return {
+        "total_applications": total_applied,
+        "total_ai_tokens_used": usage.total_tokens if usage else 0,
+        "active_tasks": await AgentTask.filter(
+            user_id=user_id, status=TaskStatus.RUNNING
+        ).count(),
+    }
