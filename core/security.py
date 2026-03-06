@@ -11,6 +11,10 @@ from fastapi.concurrency import run_in_threadpool
 from jose import JWTError, jwt
 
 from core.custom_logging import logger
+from google.oauth2 import id_token
+from google.auth.transport import requests
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 load_dotenv()
 
@@ -152,3 +156,34 @@ class MalwareScanner:
             for byte_block in iter(lambda: f.read(8192), b""):
                 sha256_hash.update(byte_block)
         return sha256_hash.hexdigest()
+
+
+class GoogleAuthService:
+    @staticmethod
+    async def verify_google_token(token: str) -> dict:
+        """
+        Verifikasi token ID dari Google Frontend.
+        """
+        try:
+            # Menggunakan run_in_threadpool karena library google-auth bersifat blocking
+            id_info = await run_in_threadpool(
+                id_token.verify_oauth2_token,
+                token,
+                requests.Request(),
+                GOOGLE_CLIENT_ID,
+            )
+
+            if id_info["iss"] not in [
+                "accounts.google.com",
+                "https://accounts.google.com",
+            ]:
+                raise ValueError("Wrong issuer.")
+
+            return {
+                "email": id_info["email"],
+                "google_id": id_info["sub"],
+                "picture": id_info.get("picture"),
+            }
+        except Exception as e:
+            logger.error("google_auth_failed", error=str(e))
+            raise HTTPException(status_code=401, detail="Invalid Google Token")
