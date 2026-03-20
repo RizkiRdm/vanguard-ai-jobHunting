@@ -1,31 +1,20 @@
 import time
-from collections import defaultdict
-from typing import List, Dict
-
-from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from tortoise.contrib.fastapi import register_tortoise
 
 from core.database import TORTOISE_CONFIG
-from core.custom_logging import logger
-from core.security import get_current_user_from_cookie
 from modules.profile.profile_router import router as profile_router
 from modules.agent.agent_router import router as agent_router
-
-# Configuration: Heavy AI tasks are limited per USER, others per IP
-LIMIT_CONFIG = {
-    "/agent/apply": {"limit": 5, "window": 60, "auth_required": True},
-    "/agent/scrape": {"limit": 5, "window": 60, "auth_required": True},
-    "default": {"limit": 60, "window": 60, "auth_required": False},
-}
-
-rate_limit_store: Dict[str, Dict[str, List[float]]] = defaultdict(
-    lambda: defaultdict(list)
-)
+from core.custom_logging import logger
 
 
 def create_application() -> FastAPI:
-    application = FastAPI(title="Vanguard AI API Gateway")
+    application = FastAPI(
+        title="Vanguard AI API",
+        version="1.1.0",
+        description="Core API with WebSocket & Dorking capabilities",
+    )
 
     register_tortoise(
         application,
@@ -42,46 +31,38 @@ def create_application() -> FastAPI:
 
 app = create_application()
 
+RATE_LIMIT_STORE: dict = {}
+RATE_LIMIT_THRESHOLD = 10
+WINDOW_SECONDS = 60
+
 
 @app.middleware("http")
-async def gateway_logic_middleware(request: Request, call_next):
-    path = request.url.path
-    current_time = time.time()
+async def rate_limit_middleware(request: Request, call_next):
+    if request.url.path == "/agent/scrape":
+        client_ip = request.client.host
+        current_time = time.time()
 
-    # 1. Get config for current path
-    config = LIMIT_CONFIG.get(path, LIMIT_CONFIG["default"])
+        if client_ip not in RATE_LIMIT_STORE:
+            RATE_LIMIT_STORE[client_ip] = []
 
-    # 2. IDENTIFY IDENTIFIER (This is where get_current_user_from_cookie is used)
-    # If path requires auth, we limit by User ID, otherwise by IP
-    identifier = request.client.host
-    if config.get("auth_required"):
-        try:
-            # Manually calling the security function since middleware can't use Depends() easily
-            identifier = await get_current_user_from_cookie(request)
-        except HTTPException:
-            # If auth fails on an auth-required path, let the router handle the 401
-            pass
+        RATE_LIMIT_STORE[client_ip] = [
+            t for t in RATE_LIMIT_STORE[client_ip] if current_time - t < WINDOW_SECONDS
+        ]
 
-    # 3. Sliding Window Logic
-    window = config["window"]
-    threshold = config["limit"]
+        if len(RATE_LIMIT_STORE[client_ip]) >= RATE_LIMIT_THRESHOLD:
+            logger.warning(
+                "rate_limit_exceeded", client_ip=client_ip, path=request.url.path
+            )
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please try again later."},
+            )
 
-    timestamps = rate_limit_store[identifier][path]
-    active_requests = [t for t in timestamps if current_time - t < window]
-    rate_limit_store[identifier][path] = active_requests
+        RATE_LIMIT_STORE[client_ip].append(current_time)
 
-    if len(active_requests) >= threshold:
-        logger.warning("rate_limit_exceeded", user_or_ip=identifier, path=path)
-        return JSONResponse(
-            status_code=429,
-            content={"error": "Too Many Requests", "retry_after": f"{window}s"},
-        )
-
-    # 4. Proceed
-    rate_limit_store[identifier][path].append(current_time)
     return await call_next(request)
 
 
 @app.get("/health")
 async def health_check():
-    return {"status": "operational", "active_users_in_limit": len(rate_limit_store)}
+    return {"status": "operational", "engine": "Tortoise ORM", "timestamp": time.time()}

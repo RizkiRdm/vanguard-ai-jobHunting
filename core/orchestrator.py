@@ -3,61 +3,65 @@ import random
 from pathlib import Path
 from typing import Dict, Any, List
 
-from core.config_manager import site_config
 from core.scraper import JobScraper
 from core.ai_agent import VanguardAI
 from core.browser import BrowserManager
 from core.task_manager import update_task_status, create_sub_task
 from core.custom_logging import logger
+from core.websocket_manager import manager  # Integrasi WebSocket
 from modules.agent.models import AgentTask, TaskStatus
 from modules.profile.models import UserProfile
-from modules.generator.services import generate_tailored_document
+from playwright.async_api import (
+    TimeoutError as PlaywrightTimeoutError,
+    Error as PlaywrightError,
+)
 
 
 class JobOrchestrator:
-    def __init__(self, headless: bool = True):
+    def __init__(self, headless: bool = True) -> None:
         self.ai = VanguardAI()
         self.browser = BrowserManager(headless=headless)
         self.scraper = JobScraper()
-        self.log = logger.bind(service="orchestrator")
-        self.semaphore = asyncio.Semaphore(3)
+        self.semaphore = asyncio.Semaphore(3)  # Max 3 concurrent browsers
         self.log = logger.bind(service="orchestrator")
 
     async def execute_from_worker(
         self, task_id: str, user_id: str, task_type: str
     ) -> Dict[str, Any]:
-        """Entry point for task execution from the worker pool."""
+
         self.log.info("execution_started", task_id=task_id, type=task_type)
-
-        # Site config defaults to linkedin if not specified in metadata
-        cfg = site_config.get_site_config("linkedin")
-
         async with self.browser.get_context(user_id=user_id) as context:
             page = await context.new_page()
             try:
                 if task_type == "DISCOVERY":
-                    return await self._handle_discovery(page, task_id, user_id, cfg)
+                    # Mengambil role impian user dari profile untuk bahan Dorking
+                    profile = await UserProfile.get(user_id=user_id)
+                    job_title = profile.target_role or "Software Engineer"
+                    return await self._handle_discovery(
+                        page, task_id, user_id, job_title
+                    )
 
                 if task_type == "AUTOMATED_APPLY":
-                    return await self._handle_application(page, task_id, user_id, cfg)
+                    return await self._handle_application(page, task_id, user_id)
 
                 raise ValueError(f"Unsupported task type: {task_type}")
 
-            except Exception as e:
-                self.log.error(
-                    "execution_critical_failure", task_id=task_id, error=str(e)
+            except PlaywrightError as pw_err:
+                await update_task_status(
+                    task_id, TaskStatus.FAILED, error=f"Browser crash: {str(pw_err)}"
                 )
-                await update_task_status(task_id, TaskStatus.FAILED, error=str(e))
-                return {"status": "error", "message": str(e)}
+                return {"status": "error", "message": str(pw_err)}
 
     async def _handle_discovery(
-        self, page, task_id: str, user_id: str, cfg: Dict
+        self, page, task_id: str, user_id: str, job_title: str
     ) -> Dict[str, Any]:
-        """Scans job boards and spawns sub-tasks for each listing."""
-        await page.goto(cfg["base_url"])
-        await asyncio.sleep(random.uniform(2, 5))
+        """Mencari lowongan menggunakan Google Dorking."""
+        # Memberitahu UI bahwa proses pencarian dimulai
+        await manager.send_personal_message(
+            {"type": "INFO", "msg": f"Starting Dorking for {job_title}"}, user_id
+        )
 
-        jobs = await self.scraper.scrape_llm(page, user_id)
+        jobs = await self.scraper.perform_dorking_search(page, job_title, user_id)
 
         for job in jobs:
             await create_sub_task(
@@ -75,23 +79,23 @@ class JobOrchestrator:
         return {"status": "success", "spawned_tasks": len(jobs)}
 
     async def _handle_application(
-        self, page, task_id: str, user_id: str, cfg: Dict
+        self, page, task_id: str, user_id: str
     ) -> Dict[str, Any]:
-        """Main ReAct loop for autonomous job application."""
-        async with self.semaphore:  # Implementation of concurrency control
+        """Main ReAct loop yang di-broadcast ke WebSocket."""
+        async with self.semaphore:
             task = await AgentTask.get(id=task_id)
-            profile = await UserProfile.get(user_id=user_id)  # Now utilized below
+            profile = await UserProfile.get(user_id=user_id)
 
-            await page.goto(task.metadata["target_url"])
+            try:
+                await page.goto(task.metadata["target_url"], timeout=30000)
+            except PlaywrightTimeoutError:
+                raise RuntimeError("Target company website took too long to load.")
 
             history: List[Dict] = []
-            max_steps = cfg["settings"].get("max_steps", 12)
-
-            # Construct a rich goal using the user's profile data
+            max_steps = 12
             application_goal = (
-                f"Apply for {task.metadata['job_title']} at {task.metadata.get('company')}. "
-                f"User Profile: {profile.summary}. "
-                f"Expected Salary: {profile.expected_salary}."
+                f"Apply for {task.metadata['job_title']}. "
+                f"User Profile: {profile.summary}. Expected Salary: {profile.expected_salary}."
             )
 
             for step in range(max_steps):
@@ -99,7 +103,6 @@ class JobOrchestrator:
                     page, f"{task_id}_step_{step}"
                 )
 
-                # AI now knows WHO it is representing
                 decision = await self.ai.analyze_screen(
                     screenshot_path=screenshot,
                     goal=application_goal,
@@ -107,63 +110,73 @@ class JobOrchestrator:
                     history=history,
                 )
 
-            action = decision.get("action")
-            self.log.info(
-                "ai_decision", step=step, action=action, thought=decision.get("thought")
-            )
+                action = decision.get("action")
+                thought = decision.get("thought")
 
-            if action == "COMPLETE":
-                await update_task_status(task_id, TaskStatus.COMPLETED)
-                return {"status": "success"}
-
-            if action == "AWAIT_USER":
-                await update_task_status(
-                    task_id, TaskStatus.AWAITING_USER, error=decision.get("reason")
+                # --- WEBSOCKET STREAMING ---
+                await manager.send_personal_message(
+                    {
+                        "type": "AGENT_STREAM",
+                        "task_id": task_id,
+                        "step": step,
+                        "thought": thought,
+                        "action": action,
+                        "screenshot_url": f"/agent/tasks/{task_id}/screenshot",
+                    },
+                    user_id=user_id,
                 )
-                return {
-                    "status": "waiting_for_user",
-                    "question": decision.get("reason"),
-                }
 
-            if action == "FAIL":
-                raise RuntimeError(f"AI gave up: {decision.get('reason')}")
+                if action == "COMPLETE":
+                    await update_task_status(task_id, TaskStatus.COMPLETED)
+                    return {"status": "success"}
 
-            await self._dispatch_action(page, decision, cfg)
+                if action == "AWAIT_USER":
+                    await update_task_status(
+                        task_id, TaskStatus.AWAITING_USER, error=decision.get("reason")
+                    )
+                    return {
+                        "status": "waiting_for_user",
+                        "question": decision.get("reason"),
+                    }
 
-            history.append(
-                {
-                    "step": step,
-                    "action": action,
-                    "selector": decision.get("selector"),
-                    "thought": decision.get("thought"),
-                }
+                if action == "FAIL":
+                    raise RuntimeError(
+                        f"AI encountered a blocker: {decision.get('reason')}"
+                    )
+
+                await self._dispatch_action(page, decision)
+
+                history.append(
+                    {
+                        "step": step,
+                        "action": action,
+                        "selector": decision.get("selector"),
+                        "thought": thought,
+                    }
+                )
+                await asyncio.sleep(random.uniform(1, 3))
+
+            await update_task_status(
+                task_id, TaskStatus.FAILED, error="Max steps exceeded"
             )
+            return {"status": "failed", "reason": "max_steps_reached"}
 
-            await asyncio.sleep(random.uniform(1, 3))
-
-        await update_task_status(task_id, TaskStatus.FAILED, error="Max steps exceeded")
-        return {"status": "failed", "reason": "max_steps_reached"}
-
-    async def _dispatch_action(self, page, decision: Dict, cfg: Dict):
-        """Map AI actions to Playwright commands with config-driven timing."""
+    async def _dispatch_action(self, page, decision: Dict) -> None:
         sel = decision.get("selector")
         act = decision.get("action")
         val = decision.get("value")
 
-        delays = cfg["settings"].get("typing_delay_range", [50, 150])
-
-        if act == "CLICK":
-            await page.click(sel, timeout=5000)
-
-        elif act == "TYPE":
-            await page.fill(sel, "")
-            await page.type(sel, str(val), delay=random.randint(*delays))
-
-        elif act == "SELECT":
-            await page.select_option(sel, value=str(val))
-
-        elif act == "UPLOAD":
-            # Resume resolution logic should go here (fetch from storage/db)
-            resume_path = Path("storage/resumes/active_resume.pdf")
-            if resume_path.exists():
-                await page.set_input_files(sel, str(resume_path))
+        try:
+            if act == "CLICK":
+                await page.click(sel, timeout=5000)
+            elif act == "TYPE":
+                await page.fill(sel, "")
+                await page.type(sel, str(val), delay=random.randint(50, 150))
+            elif act == "SELECT":
+                await page.select_option(sel, value=str(val))
+            elif act == "UPLOAD":
+                resume_path = Path("storage/resumes/active_resume.pdf")
+                if resume_path.exists():
+                    await page.set_input_files(sel, str(resume_path))
+        except PlaywrightTimeoutError:
+            self.log.warning("element_interaction_timeout", selector=sel)
