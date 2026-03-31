@@ -1,107 +1,59 @@
-import uuid
-from pathlib import Path
-from fastapi import APIRouter, Depends, Response, HTTPException, UploadFile, File
-from core.security import (
-    get_current_user_from_cookie,
-    create_access_token,
-    get_password_hash,
-    verify_password,
-    GoogleAuthService,
-    MalwareScanner,
-)
-from modules.profile.models import User, UserProfile
-from modules.agent.models import AgentTask, TaskStatus
-from core.custom_logging import logger
+import os
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from core.security import get_current_user_from_cookie
+from modules.profile.models import UserProfile
+from pydantic import BaseModel
+from typing import List, Optional
 
-router = APIRouter(prefix="/profile", tags=["User Profile & Auth"])
-STORAGE_DIR = Path("storage/resumes")
-STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-# --- AUTHENTICATION ---
+router = APIRouter(prefix="/profile", tags=["User Profile"])
 
+class ProfileUpdateSchema(BaseModel):
+    full_name: Optional[str]
+    email: Optional[str]
+    phone: Optional[str]
+    target_role: Optional[str]
+    expected_salary: Optional[str]
+    summary: Optional[str]
+    skills: Optional[List[str]]
+    experience_years: Optional[int]
+    location: Optional[str]
 
-@router.post("/auth/google")
-async def google_login(payload: dict, response: Response):
-    """Google OAuth Sign-in/Sign-up."""
-    auth_service = GoogleAuthService()
-    user_info = await auth_service.verify_google_token(payload.get("token"))
+@router.get("/me")
+async def get_my_profile(user_id: str = Depends(get_current_user_from_cookie)):
+    profile = await UserProfile.get_or_none(user_id=user_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return profile
 
-    if not user_info:
-        raise HTTPException(status_code=401, detail="Invalid Google Credentials")
-
-    user, created = await User.get_or_create(
-        email=user_info["email"],
-        defaults={"id": uuid.uuid4(), "auth_provider": "GOOGLE"},
-    )
-
-    if created:
-        await UserProfile.create(id=uuid.uuid4(), user=user)
-
-    token = create_access_token(data={"sub": str(user.id)})
-    response.set_cookie(key="access_token", value=token, httponly=True, samesite="lax")
-    return {"status": "success", "user_id": user.id}
-
-
-@router.post("/logout")
-async def logout(response: Response):
-    response.delete_cookie("access_token")
-    return {"message": "Logged out successfully"}
-
-
-# --- DATA MANAGEMENT (Resume Upload) ---
-
-
-@router.post("/upload-resume")
-async def upload_resume(
-    file: UploadFile = File(...),
-    scanner: MalwareScanner = Depends(),
-    user_id: str = Depends(get_current_user_from_cookie),
+@router.put("/me")
+async def update_my_profile(
+    data: ProfileUpdateSchema, 
+    user_id: str = Depends(get_current_user_from_cookie)
 ):
-    """
-    Saves resume, scans for malware, and updates profile.
-    """
-    task_id = str(uuid.uuid4())
-    file_extension = Path(file.filename).suffix
-    # Gunakan UUID agar tidak terjadi path traversal atau nama file bentrok
-    file_path = STORAGE_DIR / f"{user_id}_{task_id}{file_extension}"
+    profile = await UserProfile.get_or_none(user_id=user_id)
+    if not profile:
+        profile = await UserProfile.create(user_id=user_id, **data.dict(exclude_unset=True))
+    else:
+        await profile.update_from_dict(data.dict(exclude_unset=True)).save()
+    
+    return {"status": "success", "message": "Profile updated", "data": profile}
 
-    try:
-        # 1. Simpan file sementara ke disk
+@router.post("/resume")
+async def upload_resume(
+    file: UploadFile = File(...), 
+    user_id: str = Depends(get_current_user_from_cookie)
+):
+    # Ensure storage directory exists
+    os.makedirs("storage/resumes", exist_ok=True)
+    
+    file_path = f"storage/resumes/{user_id}_resume.pdf"
+    with open(file_path, "wb") as buffer:
         content = await file.read()
-        with open(file_path, "wb") as f:
-            f.write(content)
-
-        # 2. PENGGUNAAN SCANNER (CRUCIAL):
-        # Ini akan mengecek hash file ke VirusTotal atau scanner lokal
-        await scanner.verify_file_safety(str(file_path))
-
-        # 3. Update User Profile
-        profile = await UserProfile.get(user_id=user_id)
-        profile.starter_cv_path = str(file_path)
+        buffer.write(content)
+    
+    profile = await UserProfile.get_or_none(user_id=user_id)
+    if profile:
+        profile.resume_url = file_path
         await profile.save()
-
-        # 4. Trigger Task (Opsional: Jika ingin langsung apply setelah upload)
-        await AgentTask.create(
-            id=task_id,
-            user_id=user_id,
-            task_type="APPLYING",
-            status=TaskStatus.QUEUED,
-            metadata={"resume_path": str(file_path)},
-        )
-
-        logger.info(
-            "resume_secured_and_profile_updated", user_id=user_id, task_id=task_id
-        )
-        return {"status": "success", "task_id": task_id, "path": str(file_path)}
-
-    except HTTPException as he:
-        # Jika malware terdeteksi (403), hapus file dan re-throw
-        if file_path.exists():
-            file_path.unlink()
-        raise he
-    except Exception as e:
-        if file_path.exists():
-            file_path.unlink()
-        logger.error("upload_failed", error=str(e))
-        raise HTTPException(
-            status_code=500, detail="Internal server error during upload"
-        )
+        
+    return {"url": file_path}
