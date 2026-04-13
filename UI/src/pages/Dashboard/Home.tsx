@@ -41,8 +41,6 @@ const Home: React.FC = () => {
 
         {/* CURRENT TASKS TABLE */}
         <div className="col-span-12 xl:col-span-8">
-          {/* Kita kirim tasks ke BasicTableOne jika komponennya menerima props, 
-              atau biarkan BasicTableOne mengambil sendiri dari store */}
           <BasicTableOne />
 
           {/* Debug info untuk menghilangkan error 'tasks' unused */}
