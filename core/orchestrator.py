@@ -31,7 +31,13 @@ class JobOrchestrator:
         # Site config defaults to linkedin if not specified in metadata
         cfg = site_config.get_site_config("linkedin")
 
-        async with self.browser.get_context(user_id=user_id) as context:
+        await self.browser.connect()
+        try:
+             # Logic refactor: MCP handles session, orchestrator just drives
+             # This is a placeholder for the logic switch required by new BrowserManager
+             pass
+        finally:
+             await self.browser.disconnect()
             page = await context.new_page()
             try:
                 if task_type == "DISCOVERY":

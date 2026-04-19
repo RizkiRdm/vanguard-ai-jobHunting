@@ -101,8 +101,7 @@ def mock_pipeline_dependencies():
             mock_context = AsyncMock()
             mock_context.new_page = AsyncMock(return_value=mock_page)
 
-            with patch("core.browser.BrowserManager.get_context") as mock_get_ctx:
-                mock_get_ctx.return_value.__aenter__.return_value = mock_context
+            with patch("core.browser.BrowserManager.connect") as mock_connect:
                 yield
 
 
@@ -148,8 +147,6 @@ def mock_browser_context():
     mock_context.new_page = AsyncMock(return_value=mock_page)
     mock_context.close = AsyncMock()
 
-    # 3. Patch get_context sebagai Async Context Manager
-    # __aenter__ akan mengembalikan mock_context
-    with patch("core.browser.BrowserManager.get_context") as mock_get_context:
-        mock_get_context.return_value.__aenter__.return_value = mock_context
-        yield mock_page
+    # Mocking BrowserManager dependency updated for MCP migration
+    # Formerly patched get_context, now relying on direct calls via BrowserManager.mcp
+    yield mock_context
