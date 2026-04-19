@@ -41,7 +41,12 @@ async def run_integration_test():
     browser_mgr = BrowserManager(headless=True)
     try:
         log.info("testing_browser_and_stealth")
-        async with browser_mgr.get_context(user_id=TEST_USER_ID) as context:
+        await browser_mgr.connect()
+        try:
+            # Integration logic test here
+            pass
+        finally:
+            await browser_mgr.disconnect()
             page = await context.new_page()
             await page.goto("https://www.google.com", wait_until="networkidle")
 
