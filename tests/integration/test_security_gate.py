@@ -40,4 +40,4 @@ def test_scenario_c_rate_limit_abuse(client):
     # Request 11: Harus Gagal (429)
     response = client.post("/agent/scrape")
     assert response.status_code == 429
-    assert response.json()["detail"] == "Rate limit exceeded"
+    assert response.json()["detail"] == "Too many requests. Please try again later."

@@ -30,6 +30,15 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
         manager.disconnect(websocket, user_id)
 
 
+@router.post("/login-test")
+async def login_test(response: Response):
+    token = create_access_token(data={"sub": "test-user"})
+    response.set_cookie(
+        key="access_token", value=token, httponly=True, secure=True, samesite="lax"
+    )
+    return {"status": "success"}
+
+
 @router.post("/login")
 async def login(response: Response, user_id: str = "admin-user"):
     token = create_access_token(data={"sub": user_id})

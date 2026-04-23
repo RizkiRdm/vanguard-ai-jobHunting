@@ -90,10 +90,12 @@ def decrypt_credential(cipher_text: str) -> str:
 
 def mask_email(email: str) -> str:
     """Masks email addresses to protect PII in logs/UI."""
+    if "@" not in email:
+        return email
     try:
         name, domain = email.split("@")
         if len(name) > 3:
-            return f"{name[:2]}***{name[-1:]}@{domain}"
+            return f"{name[:3]}***{name[-1:]}@{domain}"
         return f"***@{domain}"
     except Exception:
         return email

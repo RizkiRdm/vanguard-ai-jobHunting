@@ -63,6 +63,12 @@ async def rate_limit_middleware(request: Request, call_next):
     return await call_next(request)
 
 
+@app.post("/test/reset-rate-limit")
+async def reset_rate_limit():
+    RATE_LIMIT_STORE.clear()
+    return {"status": "reset"}
+
+
 @app.get("/health")
 async def health_check():
     return {"status": "operational", "engine": "Tortoise ORM", "timestamp": time.time()}

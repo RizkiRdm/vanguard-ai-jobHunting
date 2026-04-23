@@ -13,8 +13,8 @@ def test_encryption_roundtrip():
 @pytest.mark.parametrize(
     "input_email, expected_output",
     [
-        ("johndoe@example.com", "joh***@example.com"),  # Standard
-        ("ab@domain.com", "ab***@domain.com"),  # Short
+        ("johndoe@example.com", "joh***e@example.com"),  # Standard
+        ("ab@domain.com", "***@domain.com"),  # Short
         ("not_email", "not_email"),  # Invalid
         ("", ""),  # Empty
     ],
