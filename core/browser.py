@@ -12,6 +12,7 @@ class BrowserManager:
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
 
     async def connect(self):
+        print(f"DEBUG: Connecting MCP: {self.mcp}")
         await self.mcp.connect()
 
     async def disconnect(self):

@@ -5,7 +5,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tortoise import Tortoise
-from core.database import TORTOISE_CONFIG
+
 from core.browser import BrowserManager
 from core.task_manager import claim_next_task, update_task_status
 from modules.agent.models import AgentTask, TaskStatus

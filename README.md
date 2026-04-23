@@ -5,20 +5,21 @@ Vanguard is a high-performance **Backend API** designed as an autonomous agent t
 ## 🏗️ Technical Architecture
 Developed with **Clean Architecture** and **Asynchronous I/O** at its core:
 - **Core Engine:** FastAPI for high-concurrency request handling.
-- **Asynchronous Processing:** Leveraging Python's `asyncio` for non-blocking browser interactions and AI reasoning loops.
+- **Asynchronous Processing:** Leveraging Python's `asyncio` for non-blocking browser interactions and AI reasoning loops powered by **TaskIQ**.
 - **Agentic Logic:** A "Reasoning Loop" (Observe -> Think -> Act) powered by **Google Gemini AI** and **Playwright**.
-- **Persistence Layer:** PostgreSQL with **Tortoise ORM**, implementing both Pessimistic and Optimistic locking to handle race conditions during task execution.
+- **Persistence Layer:** PostgreSQL with **Tortoise ORM**, implementing both Pessimistic (`FOR UPDATE`) and Optimistic (`version` column) locking to handle race conditions during task execution.
 
 ## 🔐 Security Framework (Zero Trust)
-- **Malware Scanning:** Integrated **ClamAV** for scanning uploaded documents.
+- **Malware Scanning:** Integrated **ClamAV** for scanning uploaded documents before storage.
 - **Data Protection:** **AES-256 Encryption** for sensitive portal credentials and JWT for stateless authentication.
 - **Isolated Execution:** Sandboxed directory handling for file extractions.
 
 ## 🛠️ Tech Stack
-* **Language:** Python 3.10+ (Core), Go (Familiar)
+* **Language:** Python 3.10+
 * **Framework:** FastAPI
 * **Database:** PostgreSQL
 * **ORM:** Tortoise ORM
+* **Task Queue:** TaskIQ
 * **Automation:** Playwright
 * **AI Integration:** Google Gemini SDK
 * **Security:** ClamAV, AES-256

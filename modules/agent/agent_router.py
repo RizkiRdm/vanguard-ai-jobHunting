@@ -1,4 +1,5 @@
 import uuid
+from uuid import UUID
 from typing import Dict, Any
 from fastapi import (
     APIRouter,
@@ -48,56 +49,81 @@ async def login(response: Response, user_id: str = "admin-user"):
     return {"status": "success", "user_id": user_id}
 
 
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from core.database import get_db
+
 @router.post("/scrape")
-async def trigger_discovery(user_id: str = Depends(get_current_user_from_cookie)):
+async def trigger_discovery(
+    user_id: str = Depends(get_current_user_from_cookie),
+    db: AsyncSession = Depends(get_db)
+):
     """Memicu Google Dorking task."""
-    task_id = str(uuid.uuid4())
-    await AgentTask.create(
+    task_id = uuid.uuid4()
+    task = AgentTask(
         id=task_id,
         user_id=user_id,
         task_type="DISCOVERY",
-        status=TaskStatus.QUEUED,
+        status=TaskStatus.QUEUED.value,
         metadata={"mode": "dorking"},
     )
+    db.add(task)
+    await db.commit()
     return {"task_id": task_id, "status": "queued"}
 
 
 @router.get("/tasks")
-async def list_tasks(user_id: str = Depends(get_current_user_from_cookie)):
-    return await AgentTask.filter(user_id=user_id).order_by("-created_at")
+async def list_tasks(
+    user_id: str = Depends(get_current_user_from_cookie),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(AgentTask).filter_by(user_id=user_id).order_by(AgentTask.created_at.desc())
+    )
+    return result.scalars().all()
 
 
 @router.post("/interact/{task_id}")
 async def human_interaction(
-    task_id: str,
+    task_id: UUID,
     answer: Dict[str, Any],
     user_id: str = Depends(get_current_user_from_cookie),
+    db: AsyncSession = Depends(get_db)
 ):
-    task = await AgentTask.get_or_none(id=task_id, user_id=user_id)
+    result = await db.execute(select(AgentTask).filter_by(id=task_id, user_id=user_id))
+    task = result.scalar_one_or_none()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    task.metadata["user_answer"] = answer
-    task.status = TaskStatus.QUEUED
-    await task.save()
+    task.meta_data["user_answer"] = answer
+    task.status = TaskStatus.QUEUED.value
+    await db.commit()
     return {"status": "resumed"}
 
 
 @router.get("/tasks/{task_id}/screenshot")
 async def get_task_screenshot(
-    task_id: str, user_id: str = Depends(get_current_user_from_cookie)
+    task_id: UUID, 
+    user_id: str = Depends(get_current_user_from_cookie),
+    db: AsyncSession = Depends(get_db)
 ):
-    task = await AgentTask.get_or_none(id=task_id, user_id=user_id)
-    if not task or "last_screenshot" not in task.metadata:
+    result = await db.execute(select(AgentTask).filter_by(id=task_id, user_id=user_id))
+    task = result.scalar_one_or_none()
+    if not task or "last_screenshot" not in task.meta_data:
         raise HTTPException(status_code=404, detail="No screenshot available")
-    return FileResponse(task.metadata["last_screenshot"])
+    return FileResponse(task.meta_data["last_screenshot"])
 
 
 @router.post("/tasks/{task_id}/stop")
-async def stop_task(task_id: str, user_id: str = Depends(get_current_user_from_cookie)):
-    task = await AgentTask.get_or_none(id=task_id, user_id=user_id)
+async def stop_task(
+    task_id: UUID, 
+    user_id: str = Depends(get_current_user_from_cookie),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(AgentTask).filter_by(id=task_id, user_id=user_id))
+    task = result.scalar_one_or_none()
     if task:
-        task.status = TaskStatus.FAILED
-        task.metadata["error"] = "Cancelled by user"
-        await task.save()
+        task.status = TaskStatus.FAILED.value
+        task.meta_data["error"] = "Cancelled by user"
+        await db.commit()
     return {"status": "stopped"}

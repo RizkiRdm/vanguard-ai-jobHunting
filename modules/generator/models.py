@@ -1,55 +1,29 @@
-from tortoise import fields, models
-from tortoise.contrib.pydantic import pydantic_model_creator
+from sqlalchemy import String, Integer, DateTime, Float, Text, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
+from uuid import UUID, uuid4
+from datetime import datetime
+from core.database import Base
 
+class ScrapedJob(Base):
+    __tablename__ = "scraped_jobs"
 
-class ScrapedJob(models.Model):
-    """Stores job listings with detailed extraction for AI matching."""
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(index=True)
+    job_title: Mapped[str] = mapped_column(String(200))
+    company_name: Mapped[str] = mapped_column(String(200))
+    location: Mapped[str] = mapped_column(String(255), nullable=True)
+    job_description: Mapped[str] = mapped_column(Text)
+    similarity_score: Mapped[float] = mapped_column(Float, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    id = fields.UUIDField(pk=True)
-    user_id = fields.UUIDField(db_index=True)
+class TailoredDocument(Base):
+    __tablename__ = "tailored_documents"
 
-    job_title = fields.CharField(max_length=200)
-    company_name = fields.CharField(max_length=200)
-    location = fields.CharField(max_length=255, null=True)
-    job_description = fields.TextField()
-
-    # Metadata for ranking
-    similarity_score = fields.FloatField(default=0.0)
-    created_at = fields.DatetimeField(auto_now_add=True)
-
-    class Meta:
-        table = "scraped_jobs"
-
-
-class TailoredDocument(models.Model):
-    """Stores career documents with versioning."""
-
-    id = fields.UUIDField(pk=True)
-    user_id = fields.UUIDField(db_index=True)
-    task_id = fields.UUIDField(db_index=True)
-
-    doc_type = fields.CharField(max_length=50)  # CV or COVER_LETTER
-    content = fields.TextField()
-
-    # New: Track token cost for this specific document
-    token_cost = fields.IntField(default=0)
-    created_at = fields.DatetimeField(auto_now_add=True)
-
-    class Meta:
-        table = "tailored_documents"
-
-
-class LLMUsageLog(models.Model):
-    """Centralized audit log for AI expenses."""
-
-    id = fields.UUIDField(pk=True)
-    user_id = fields.UUIDField(db_index=True, null=True)
-    model_name = fields.CharField(max_length=100)
-    total_tokens = fields.IntField()
-    timestamp = fields.DatetimeField(auto_now_add=True)
-
-    class Meta:
-        table = "llm_usage_logs"
-
-
-ScrapedJob_Pydantic = pydantic_model_creator(ScrapedJob, name="ScrapedJob")
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(index=True)
+    task_id: Mapped[UUID] = mapped_column(index=True)
+    doc_type: Mapped[str] = mapped_column(String(50))
+    content: Mapped[str] = mapped_column(Text)
+    token_cost: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

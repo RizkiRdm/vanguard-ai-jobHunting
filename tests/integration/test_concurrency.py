@@ -4,7 +4,7 @@ from tortoise import Tortoise
 from modules.agent.models import AgentTask, TaskStatus
 from modules.profile.models import User
 from core.task_manager import claim_next_task
-from core.database import TORTOISE_CONFIG
+
 
 
 @pytest.mark.asyncio(loop_scope="function")

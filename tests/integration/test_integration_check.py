@@ -7,7 +7,7 @@ from tortoise import Tortoise
 from core.config_manager import site_config
 from core.browser import BrowserManager
 from core.ai_agent import VanguardAI
-from core.database import TORTOISE_CONFIG
+
 from core.scraper import JobScraper
 from core.custom_logging import logger
 

@@ -1,0 +1,65 @@
+# FILE: .github/workflows/ci.yml
+# Ref: BLURPRINT.md CI must run 3 separate test types before PR can merge
+
+name: CI Pipeline - Unit + Integration + E2E
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - prod
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup project environment
+        # ← Adapt sesuai stack di ARCHITECTURE.md (Python/Node/Laravel/etc)
+        run: echo "Setup for [STACK] - replace with real setup step"
+
+      - name: Run Unit Tests
+        run: |
+          # ← exact command dari section 2 OUTPUT ORDER di task prompt
+          # contoh: pytest tests/unit/ -q --tb=no
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup project environment
+        run: echo "Setup for [STACK] - replace with real setup step"
+
+      - name: Run Integration Tests
+        run: |
+          # ← exact command dari section 2 OUTPUT ORDER
+          # contoh: pytest tests/integration/ -q --tb=no -m integration
+
+  e2e-test:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup project environment
+        run: echo "Setup for [STACK] - replace with real setup step"
+
+      - name: Run E2E Tests
+        run: |
+          # ← exact command dari section 2 OUTPUT ORDER
+          # contoh: playwright test --project=chromium
+
+# NOTE: Set branch protection di repo settings → Required status checks:
+#       unit-test, integration-test, e2e-test
+#       → Merge ke main/prod hanya boleh kalau ketiganya PASS

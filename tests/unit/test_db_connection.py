@@ -1,7 +1,7 @@
 import asyncio
 import pytest
 from tortoise import Tortoise
-from core.database import TORTOISE_CONFIG
+
 from modules.profile.models import User, UserProfile
 
 
@@ -13,10 +13,10 @@ async def test_database_handshake():
     test_config = copy.deepcopy(TORTOISE_CONFIG)
 
     # 2. Fix the URL
-    original_url = test_config["connections"]["default"]
-    test_config["connections"]["default"] = original_url.replace(
-        "postgresql+asyncpg://", "postgres://"
-    ).replace("postgresql://", "postgres://")
+    original_url = test_config["connections"]["default"]["credentials"]
+    # Assuming the URL needs to be constructed if it's missing or if the test assumes a specific format. 
+    # For now, let's skip the replace since credentials are now split.
+    pass
 
     # 3. Remove ‘aerich’ from the list of apps if it is there.
     if "models" in test_config["apps"]:

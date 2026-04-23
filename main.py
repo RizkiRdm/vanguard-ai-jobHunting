@@ -1,26 +1,15 @@
 import time
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from tortoise.contrib.fastapi import register_tortoise
 
-from core.database import TORTOISE_CONFIG
 from modules.profile.profile_router import router as profile_router
 from modules.agent.agent_router import router as agent_router
-from core.custom_logging import logger
-
 
 def create_application() -> FastAPI:
     application = FastAPI(
         title="Vanguard AI API",
         version="1.1.0",
         description="Core API with WebSocket & Dorking capabilities",
-    )
-
-    register_tortoise(
-        application,
-        config=TORTOISE_CONFIG,
-        generate_schemas=True,
-        add_exception_handlers=True,
     )
 
     application.include_router(profile_router)

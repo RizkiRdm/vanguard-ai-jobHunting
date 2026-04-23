@@ -3,14 +3,13 @@ import random
 import sys
 import signal
 from pathlib import Path
-from tortoise import Tortoise
 
 # Ensure the project root is in sys.path
 root_path = str(Path(__file__).parent.parent)
 if root_path not in sys.path:
     sys.path.append(root_path)
 
-from core.database import TORTOISE_CONFIG
+
 from core.orchestrator import JobOrchestrator
 from core.task_manager import claim_next_task, update_task_status
 from core.custom_logging import logger
@@ -32,8 +31,6 @@ class VanguardWorker:
         """Main worker loop with improved resilience."""
         self.log.info("worker_started", provider="postgresql_native_skip_locked")
 
-        # Initialize DB with context management
-        await Tortoise.init(config=TORTOISE_CONFIG)
 
         try:
             while self.is_running:
@@ -79,7 +76,6 @@ class VanguardWorker:
             self.log.critical("worker_panic", error=str(e))
         finally:
             self.log.info("cleaning_up_resources")
-            await Tortoise.close_connections()
 
 
 async def main():
