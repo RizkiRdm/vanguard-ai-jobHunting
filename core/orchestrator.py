@@ -33,27 +33,19 @@ class JobOrchestrator:
 
         await self.browser.connect()
         try:
-             # Logic refactor: MCP handles session, orchestrator just drives
-             # This is a placeholder for the logic switch required by new BrowserManager
-             pass
+            # Logic refactor: MCP handles session, orchestrator just drives
+            # This is a placeholder for the logic switch required by new BrowserManager
+            page = await self.browser.mcp.session.call_tool("new_page", {}) # Placeholder
+            
+            if task_type == "DISCOVERY":
+                return await self._handle_discovery(page, task_id, user_id, cfg)
+
+            if task_type == "AUTOMATED_APPLY":
+                return await self._handle_application(page, task_id, user_id, cfg)
+
+            raise ValueError(f"Unsupported task type: {task_type}")
         finally:
-             await self.browser.disconnect()
-            page = await context.new_page()
-            try:
-                if task_type == "DISCOVERY":
-                    return await self._handle_discovery(page, task_id, user_id, cfg)
-
-                if task_type == "AUTOMATED_APPLY":
-                    return await self._handle_application(page, task_id, user_id, cfg)
-
-                raise ValueError(f"Unsupported task type: {task_type}")
-
-            except Exception as e:
-                self.log.error(
-                    "execution_critical_failure", task_id=task_id, error=str(e)
-                )
-                await update_task_status(task_id, TaskStatus.FAILED, error=str(e))
-                return {"status": "error", "message": str(e)}
+            await self.browser.disconnect()
 
     async def _handle_discovery(
         self, page, task_id: str, user_id: str, cfg: Dict

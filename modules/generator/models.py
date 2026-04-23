@@ -27,3 +27,12 @@ class TailoredDocument(Base):
     content: Mapped[str] = mapped_column(Text)
     token_cost: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+class LLMUsageLog(Base):
+    __tablename__ = "llm_usage_logs"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(index=True, nullable=True)
+    model_name: Mapped[str] = mapped_column(String(100))
+    total_tokens: Mapped[int] = mapped_column(Integer)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

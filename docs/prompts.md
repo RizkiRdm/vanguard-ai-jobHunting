@@ -37,28 +37,32 @@ CONSTRAINTS (HARD):
 - Reuse existing code. Ambiguous → safest assumption per DESIGN.md.
 - All 3 tests must PASS before merge.
 - merge to branch when all test passed and delete current branch
-  TASK: Issue #7 — Migrate ORM from Tortoise to SQLAlchemy 2.0 + Alembic
+  TASK: Issue #8 — Update README.md After ORM Migration & UI Audit
 
-Description: Current persistence layer pake Tortoise ORM (core/database.py + migrations/models/).
-Kita ganti ke SQLAlchemy 2.0 (async) + Alembic untuk migration karena ecosystem lebih kuat, better typing, performance di complex query, dan align sama official FastAPI recommendation.
+Description: Setelah ORM migration dan UI component audit selesai, update README supaya akurat.  
+Tambah section detail tentang tech stack baru, cara setup DB, dan khususnya **UI Component Library** yang dipakai (React + Tailwind).
 
 Todo List
 
-- [ ] Research migration path (Tortoise models → SQLAlchemy declarative models)
-- [ ] Update `pyproject.toml` → remove tortoise-orm + aerich, tambah sqlalchemy[asyncio] + alembic + asyncpg
-- [ ] Refactor `core/database.py` → SQLAlchemy engine + session factory (async)
-- [ ] Convert all models di `migrations/models/` → SQLAlchemy models (modules/profile/, agent/, generator/)
-- [ ] Setup Alembic migrations (alembic init + generate initial migration)
-- [ ] Update all repository/query logic di modules/ yang pake Tortoise
-- [ ] Update dependency injection di FastAPI app
+- [ ] Update Tech Stack section (ganti Tortoise → SQLAlchemy 2.0 + Alembic)
+- [ ] Tambah section "Database" dengan setup Alembic + connection string
+- [ ] Tambah section "Frontend / UI" :
+  - React + Tailwind CSS (TailAdmin base)
+  - List component yang dipakai (Button, Card, Table, Modal, Form, Dashboard layout, dll)
+  - Best practices pemakaian component (naming, props, styling consistency)
+  - Link ke component folder di UI/
+- [ ] Update Architecture diagram kalau perlu
+- [ ] Tambah setup instructions yang lebih lengkap (backend + frontend)
+- [ ] Cleanup outdated info
 
 Acceptance Criteria
 
-- All database operations (CRUD profile, agent state, generator) work identically
-- Alembic migration berhasil apply ke PostgreSQL
-- No Tortoise import tersisa di codebase
-- Async support tetap full
+- README akurat 100% dengan current stack
+- Section UI jelas dan membantu dev lain paham component usage tanpa baca semua code
+- Bahasa tetap professional & concise
 
 START. No deviation. Follow OUTPUT ORDER exactly.
 
-✦ Urutan pengerjaan (prioritas tertinggi ke bawah): 2. #8 (Update README): Sinkronisasi dokumentasi setelah migrasi database. 3. #5 (Testing & Validation): Pastikan semua sistem stabil pasca-migrasi. 4. #9 (UI Component Audit): Audit sebelum bangun halaman spesifik. 5. #10 - #15 (UI Tasks): Bangun UI secara bertahap. 6. #6 (Cleanup & Deployment): Terakhir, bersihkan technical debt dan deploy.
+4. #9 (UI Component Audit): Audit sebelum bangun halaman spesifik.
+5. #10 - #15 (UI Tasks): Bangun UI secara bertahap.
+6. #6 (Cleanup & Deployment): Terakhir, bersihkan technical debt dan deploy.

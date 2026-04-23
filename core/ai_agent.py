@@ -8,7 +8,7 @@ from PIL import Image
 from google import genai
 from google.genai.errors import APIError
 from core.custom_logging import logger
-from modules.agent.models import LLMUsageLog
+from modules.agent.models import AgentLLMUsageLog as LLMUsageLog
 
 
 class VanguardAI:

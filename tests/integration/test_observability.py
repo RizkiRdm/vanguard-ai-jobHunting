@@ -4,7 +4,7 @@ import pytest
 from PIL import Image
 from core.ai_agent import VanguardAI
 from core.custom_logging import setup_logging
-from modules.agent.models import LLMUsageLog
+from modules.agent.models import AgentLLMUsageLog as LLMUsageLog
 from modules.profile.models import User
 
 

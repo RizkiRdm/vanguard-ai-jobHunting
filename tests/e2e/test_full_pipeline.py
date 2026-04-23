@@ -2,7 +2,7 @@ import pytest
 import io
 from fastapi import UploadFile
 from modules.profile.models import User
-from modules.agent.models import AgentTask, TaskStatus, LLMUsageLog
+from modules.agent.models import AgentTask, TaskStatus, AgentLLMUsageLog as LLMUsageLog
 from core.orchestrator import JobOrchestrator
 
 

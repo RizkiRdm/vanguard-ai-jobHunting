@@ -35,8 +35,8 @@ class AgentTask(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     parent_id: Mapped[UUID] = mapped_column(nullable=True, index=True)
 
-class LLMUsageLog(Base):
-    __tablename__ = "llm_usage_logs"
+class AgentLLMUsageLog(Base):
+    __tablename__ = "agent_llm_usage_logs"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(index=True, nullable=True)
