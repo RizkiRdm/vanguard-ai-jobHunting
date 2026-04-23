@@ -7,43 +7,57 @@ Developed with **Clean Architecture** and **Asynchronous I/O** at its core:
 - **Core Engine:** FastAPI for high-concurrency request handling.
 - **Asynchronous Processing:** Leveraging Python's `asyncio` for non-blocking browser interactions and AI reasoning loops powered by **TaskIQ**.
 - **Agentic Logic:** A "Reasoning Loop" (Observe -> Think -> Act) powered by **Google Gemini AI** and **Playwright**.
-- **Persistence Layer:** PostgreSQL with **Tortoise ORM**, implementing both Pessimistic (`FOR UPDATE`) and Optimistic (`version` column) locking to handle race conditions during task execution.
+- **Persistence Layer:** PostgreSQL with **SQLAlchemy 2.0 (Async)**, utilizing **Alembic** for schema migrations and versioned state management.
 
 ## 🔐 Security Framework (Zero Trust)
-- **Malware Scanning:** Integrated **ClamAV** for scanning uploaded documents before storage.
+- **Malware Scanning:** Integrated **VirusTotal/ClamAV** for scanning uploaded documents before storage.
 - **Data Protection:** **AES-256 Encryption** for sensitive portal credentials and JWT for stateless authentication.
 - **Isolated Execution:** Sandboxed directory handling for file extractions.
 
 ## 🛠️ Tech Stack
-* **Language:** Python 3.10+
+* **Language:** Python 3.12+
 * **Framework:** FastAPI
 * **Database:** PostgreSQL
-* **ORM:** Tortoise ORM
+* **ORM:** SQLAlchemy 2.0 (Async) + Alembic
 * **Task Queue:** TaskIQ
 * **Automation:** Playwright
 * **AI Integration:** Google Gemini SDK
+* **Frontend:** React + Tailwind CSS (TailAdmin Base)
 * **Security:** ClamAV, AES-256
+
+## 💿 Database Setup
+Vanguard uses SQLAlchemy 2.0 with asyncpg.
+1. Ensure PostgreSQL is running.
+2. Set `DATABASE_URL` in `.env` (e.g., `postgresql+asyncpg://user:pass@host:port/dbname`).
+3. Run migrations: `alembic upgrade head`.
+
+## 🎨 Frontend / UI
+Vanguard uses a modern dashboard built with React and Tailwind CSS.
+- **Component Library:** Custom library located in `UI/src/components/`.
+- **Core Components:** `Button`, `Card`, `Table`, `Modal`, `Form`, `DashboardLayout`.
+- **Styling:** Consistent Tailwind utility classes.
+- **Best Practices:** Prefer component composition, naming follows `PascalCase`, props documented in component files.
 
 ## 📁 Project Structure
 ``` tree
 vanguard-app/
 ├── core/                       # Shared Engine
-│   ├── database.py             # Tortoise Async + Optimistic Lock Config
+│   ├── database.py             # SQLAlchemy Async Engine/Session
 │   ├── security.py             # AES-256 & PII Masking
-│   ├── ai_engine.py            # Gemini SDK + Phoenix Tracing
+│   ├── ai_engine.py            # Gemini SDK
 │   ├── browser.py              # Playwright Worker Setup
-│   └── malware_scan.py         # ClamAV Wrapper
+│   └── malware_scan.py         # Scanner Wrapper
 ├── modules/                    # Business Domains
-│   ├── profile/                # M: Portfolio, V: JSON, C: API
-│   ├── agent/                  # M: Task, V: JSON, C: API/WS
-│   └── generator/              # M: TailoredDoc, V: JSON, C: API
+│   ├── profile/                # User Profile Logic
+│   ├── agent/                  # AI Agent Tasks/WS
+│   └── generator/              # Document Generation
+├── UI/                         # Frontend App
+│   ├── src/components/         # UI Component Library
+│   └── ...
 ├── shared/                     # The Contract
 │   └── schemas.py              # Pydantic (Input/Output Validation)
-├── tests/                      # Testing Suite (Pytest)
-│   ├── unit/                   # Security, Parsing, & Logic tests
-│   ├── integration/            # API Endpoints & DB Race Condition tests
-│   ├── e2e/                    # Full Scraping-to-Apply simulations
-│   └── conftest.py             # Fixtures for Mock DB & Async Loop
+├── tests/                      # Testing Suite (Pytest + Vitest)
+├── migrations/                 # Alembic Migrations
 ├── main.py                     # App Entry Point
 └── .env.example
 ```
