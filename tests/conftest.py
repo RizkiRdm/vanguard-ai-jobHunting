@@ -28,6 +28,10 @@ async def db_setup():
     Setup database yang lebih bersih dengan pembersihan total sebelum & sesudah test.
     """
     db_url = os.getenv("DATABASE_URL")
+    if db_url and db_url.startswith("postgres+asyncpg://"):
+        db_url = db_url.replace("postgres+asyncpg://", "postgres://", 1)
+    elif db_url and db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgres://", 1)
 
     # Tambahkan parameter pool agar lebih stabil di environment testing
     if "?" in db_url:

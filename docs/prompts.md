@@ -37,32 +37,77 @@ CONSTRAINTS (HARD):
 - Reuse existing code. Ambiguous → safest assumption per DESIGN.md.
 - All 3 tests must PASS before merge.
 - merge to branch when all test passed and delete current branch
-  TASK: Issue #8 — Update README.md After ORM Migration & UI Audit
+  TASK: Issue #9 — UI Component Audit & Standardization (React + Tailwind)
 
-Description: Setelah ORM migration dan UI component audit selesai, update README supaya akurat.  
-Tambah section detail tentang tech stack baru, cara setup DB, dan khususnya **UI Component Library** yang dipakai (React + Tailwind).
+Description: UI folder pake React + Tailwind (sudah migrate ke TailAdmin).
+Fokus bukan bikin UI baru, tapi audit & standardize pemakaian existing components saja.
+Ikutin flow dari sisa wireframe/UX document yang masih ada + current unfinished UI.
+Tujuannya: consistency, reusability, dan maintainability component.
 
 Todo List
 
-- [ ] Update Tech Stack section (ganti Tortoise → SQLAlchemy 2.0 + Alembic)
-- [ ] Tambah section "Database" dengan setup Alembic + connection string
-- [ ] Tambah section "Frontend / UI" :
-  - React + Tailwind CSS (TailAdmin base)
-  - List component yang dipakai (Button, Card, Table, Modal, Form, Dashboard layout, dll)
-  - Best practices pemakaian component (naming, props, styling consistency)
-  - Link ke component folder di UI/
-- [ ] Update Architecture diagram kalau perlu
-- [ ] Tambah setup instructions yang lebih lengkap (backend + frontend)
-- [ ] Cleanup outdated info
+- [ ] Audit semua component di UI/ (list apa saja yang dipakai: Button, Card, Input, Table, Modal, Sidebar, Dashboard, JobCard, dll)
+- [ ] Document component usage di README (atau buat components.md)
+- [ ] Standardize props, styling (Tailwind classes), dan naming convention
+- [ ] Fix inconsistency di component yang sudah dipakai di pages yang belum beres
+- [ ] Pastikan semua component follow TailAdmin pattern (jika ada)
+- [ ] Align component flow dengan existing UX/wireframe (login → dashboard → agent monitoring → job apply flow)
 
 Acceptance Criteria
 
-- README akurat 100% dengan current stack
-- Section UI jelas dan membantu dev lain paham component usage tanpa baca semua code
-- Bahasa tetap professional & concise
+- Semua component ter-audit dan didokumentasikan
+- No duplicate logic atau inconsistent styling di UI yang sudah ada
+- Flow UI mengikuti wireframe/UX yang tersisa tanpa bikin halaman baru
+- Code clean, reusable, dan easy buat continue development
 
 START. No deviation. Follow OUTPUT ORDER exactly.
 
-4. #9 (UI Component Audit): Audit sebelum bangun halaman spesifik.
-5. #10 - #15 (UI Tasks): Bangun UI secara bertahap.
-6. #6 (Cleanup & Deployment): Terakhir, bersihkan technical debt dan deploy.
+Daftar API Backend (FastAPI) Vanguard AI:
+
+🤖 Agent & Automation (/agent)
+┌────────┬─────────────────────────────┬────────────────────────────────────┐
+│ Method │ Endpoint │ Deskripsi │
+├────────┼─────────────────────────────┼────────────────────────────────────┤
+│ WS │ /ws/{user_id} │ Real-time update status agent & │
+│ │ │ thought stream via WebSocket. │
+│ POST │ /scrape │ Memicu agent untuk mulai melakukan │
+│ │ │ scraping/discovery pada URL │
+│ │ │ tertentu. │
+│ GET │ /tasks │ Mengambil semua daftar task │
+│ │ │ (discovery/apply) milik user. │
+│ GET │ /tasks/{task_id}/screenshot │ Mengambil screenshot terakhir dari │
+│ │ │ proses browser agent. │
+│ POST │ /tasks/{task_id}/stop │ Menghentikan paksa task yang │
+│ │ │ sedang berjalan. │
+│ POST │ /interact/{task_id} │ HITL: Mengirim jawaban user jika │
+│ │ │ agent menemui pertanyaan │
+│ │ │ subjektif. │
+│ POST │ /login │ Endpoint login (internal/test). │
+└────────┴─────────────────────────────┴────────────────────────────────────┘
+
+👤 Profile & User (/profile)
+┌────────┬──────────┬────────────────────────────────────────────────────┐
+│ Method │ Endpoint │ Deskripsi │
+├────────┼──────────┼────────────────────────────────────────────────────┤
+│ GET │ /me │ Mengambil data profil user yang sedang login │
+│ │ │ (termasuk stats). │
+│ PUT │ /me │ Update informasi profil user. │
+│ POST │ /resume │ Upload file resume (PDF/ZIP) untuk di-parsing oleh │
+│ │ │ AI. │
+└────────┴──────────┴────────────────────────────────────────────────────┘
+
+🛠 Internal / System
+┌────────┬───────────────┬─────────────────────────┐
+│ Method │ Endpoint │ Deskripsi │
+├────────┼───────────────┼─────────────────────────┤
+│ GET │ /docs │ Dokumentasi Swagger UI. │
+│ GET │ /openapi.json │ Spek OpenAPI sistem. │
+└────────┴───────────────┴─────────────────────────┘
+
+Catatan Backend:
+
+- Database: PostgreSQL (Hybrid Tortoise ORM & SQLAlchemy Async).
+- Security: AES-256 untuk PII, Malware scan (ClamAV) untuk upload resume, JWT
+  cookie-based.
+- Worker: Background worker (core/worker.py) memproses antrean task dari
+  database.

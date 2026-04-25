@@ -2,7 +2,6 @@ import pytest
 import uuid
 from modules.agent.models import AgentTask, TaskStatus
 from core.task_manager import claim_next_task
-from core.worker import worker_loop
 import asyncio
 
 from modules.profile.models import User

@@ -60,4 +60,4 @@ async def reset_rate_limit():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "operational", "engine": "Tortoise ORM", "timestamp": time.time()}
+    return {"status": "operational", "engine": "SqlAlchemy", "timestamp": time.time()}
