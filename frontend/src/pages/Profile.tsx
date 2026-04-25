@@ -7,7 +7,7 @@ import api from '../api';
 export default function Profile() {
   const { profile, loading } = useProfile();
   const [name, setName] = useState(profile?.name || '');
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="space-y-6"><SkeletonCard /><SkeletonCard /></div>;
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="bg-surface border border-border rounded-xl p-5">
