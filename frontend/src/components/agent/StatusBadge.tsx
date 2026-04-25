@@ -8,7 +8,6 @@ export const StatusBadge = ({ status }: { status: TaskStatus }) => {
     COMPLETED: 'bg-elevated text-text-muted',
     FAILED: 'bg-red-500/10 text-red-400',
   };
-  
   return (
     <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium inline-flex items-center gap-1.5 ${styles[status]}`}>
       {status === 'RUNNING' && <span className='w-1.5 h-1.5 rounded-full bg-status-running animate-pulse' />}
