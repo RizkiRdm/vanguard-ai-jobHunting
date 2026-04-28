@@ -6,7 +6,7 @@ Vanguard is **production-ready full-stack application** bridging job seekers and
 
 - **Backend:** FastAPI (Async) + SQLAlchemy 2.0 + Alembic.
 - **Persistence:** PostgreSQL (leveraging native row-level locking & asyncpg).
-- **Frontend:** React + TypeScript + Tailwind CSS (TailAdmin Base).
+- **Frontend:** React + TypeScript + Tailwind CSS.
 - **Automation:** Playwright + MCP (Model Context Protocol).
 - **Core Loop:** Orchestrated agentic reasoning powered by **Google Gemini AI**.
 

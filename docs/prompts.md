@@ -1,5 +1,4 @@
 ROLE: Senior Software Engineer @ Vanguard. Stack: FastAPI + Postgresql + React JS with Typescript.
-MODE: CAVEMAN. Max 2 kalimat di luar code. Zero filler. Zero thinking visible.
 
 OUTPUT ORDER (STRICT):
 
@@ -61,53 +60,3 @@ Acceptance Criteria
 - Code clean, reusable, dan easy buat continue development
 
 START. No deviation. Follow OUTPUT ORDER exactly.
-
-Daftar API Backend (FastAPI) Vanguard AI:
-
-🤖 Agent & Automation (/agent)
-┌────────┬─────────────────────────────┬────────────────────────────────────┐
-│ Method │ Endpoint │ Deskripsi │
-├────────┼─────────────────────────────┼────────────────────────────────────┤
-│ WS │ /ws/{user_id} │ Real-time update status agent & │
-│ │ │ thought stream via WebSocket. │
-│ POST │ /scrape │ Memicu agent untuk mulai melakukan │
-│ │ │ scraping/discovery pada URL │
-│ │ │ tertentu. │
-│ GET │ /tasks │ Mengambil semua daftar task │
-│ │ │ (discovery/apply) milik user. │
-│ GET │ /tasks/{task_id}/screenshot │ Mengambil screenshot terakhir dari │
-│ │ │ proses browser agent. │
-│ POST │ /tasks/{task_id}/stop │ Menghentikan paksa task yang │
-│ │ │ sedang berjalan. │
-│ POST │ /interact/{task_id} │ HITL: Mengirim jawaban user jika │
-│ │ │ agent menemui pertanyaan │
-│ │ │ subjektif. │
-│ POST │ /login │ Endpoint login (internal/test). │
-└────────┴─────────────────────────────┴────────────────────────────────────┘
-
-👤 Profile & User (/profile)
-┌────────┬──────────┬────────────────────────────────────────────────────┐
-│ Method │ Endpoint │ Deskripsi │
-├────────┼──────────┼────────────────────────────────────────────────────┤
-│ GET │ /me │ Mengambil data profil user yang sedang login │
-│ │ │ (termasuk stats). │
-│ PUT │ /me │ Update informasi profil user. │
-│ POST │ /resume │ Upload file resume (PDF/ZIP) untuk di-parsing oleh │
-│ │ │ AI. │
-└────────┴──────────┴────────────────────────────────────────────────────┘
-
-🛠 Internal / System
-┌────────┬───────────────┬─────────────────────────┐
-│ Method │ Endpoint │ Deskripsi │
-├────────┼───────────────┼─────────────────────────┤
-│ GET │ /docs │ Dokumentasi Swagger UI. │
-│ GET │ /openapi.json │ Spek OpenAPI sistem. │
-└────────┴───────────────┴─────────────────────────┘
-
-Catatan Backend:
-
-- Database: PostgreSQL (Hybrid Tortoise ORM & SQLAlchemy Async).
-- Security: AES-256 untuk PII, Malware scan (ClamAV) untuk upload resume, JWT
-  cookie-based.
-- Worker: Background worker (core/worker.py) memproses antrean task dari
-  database.
