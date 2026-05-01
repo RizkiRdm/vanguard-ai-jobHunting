@@ -1,9 +1,12 @@
 import time
+import asyncio
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from modules.profile.profile_router import router as profile_router
 from modules.agent.agent_router import router as agent_router
+from core.pg_listener import listen_to_task_updates
+from core.custom_logging import logger
 
 def create_application() -> FastAPI:
     application = FastAPI(
@@ -14,6 +17,11 @@ def create_application() -> FastAPI:
 
     application.include_router(profile_router)
     application.include_router(agent_router)
+
+    @application.on_event("startup")
+    async def startup_event():
+        asyncio.create_task(listen_to_task_updates())
+        logger.info("pg_listener_started")
 
     return application
 
