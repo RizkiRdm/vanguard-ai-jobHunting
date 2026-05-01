@@ -1,30 +1,31 @@
 # 🛡️ Vanguard: Autonomous AI Job Hunting System
 
-Vanguard is **production-ready full-stack application** bridging job seekers and recruitment systems via autonomous AI agents. Built with **Clean Architecture** for scalability and **Event-Driven Asynchronous Processing** using PostgreSQL as the central backbone.
+Vanguard is an **autonomous AI job hunting system**. It finds relevant jobs, tailors your CV, and submits applications automatically via browser automation. Built with **Clean Architecture** and **Event-Driven Asynchronous Processing** using PostgreSQL as the central backbone.
 
 ## 🏗️ Technical Architecture
 
 - **Backend:** FastAPI (Async) + SQLAlchemy 2.0 + Alembic.
 - **Persistence:** PostgreSQL (leveraging native row-level locking & asyncpg).
-- **Frontend:** React + TypeScript + Tailwind CSS.
+- **Frontend:** Minimalist single-page HTML (no build step).
 - **Automation:** Playwright + MCP (Model Context Protocol).
 - **Core Loop:** Orchestrated agentic reasoning powered by **Google Gemini AI**.
 
-## 🔐 Security Framework (Zero Trust)
+## 🔐 Security Framework
 
-- **Malware Scanning:** Integrated **VirusTotal/ClamAV** for file integrity.
-- **Data Protection:** **AES-256 Encryption** for sensitive credentials and JWT stateless auth.
-- **Isolated Execution:** Sandboxed directory handling.
+- **Malware Scanning:** VirusTotal API integration for resume safety.
+- **Data Protection:** AES-256 encryption for credentials and JWT stateless auth.
+- **Isolated Execution:** Secure storage for resume files.
 
 ## 🛠️ Tech Stack
 
-- **Language:** Python 3.12+ (Backend) | TypeScript (Frontend)
-- **Framework:** FastAPI | React
-- **Database:** PostgreSQL (AsyncPG)
+- **Language:** Python 3.12+
+- **Framework:** FastAPI
+- **Database:** PostgreSQL 15+ (asyncpg)
 - **ORM:** SQLAlchemy 2.0 (Async) + Alembic
 - **Automation:** Playwright
-- **AI:** Google Gemini SDK
-- **UI:** Tailwind CSS (TailAdmin Base)
+- **AI:** Google Gemini SDK (`google-genai`)
+- **Logging:** `structlog` (JSON output)
+- **UI:** Plain HTML + Tailwind CSS CDN
 
 ## 💿 Database Setup
 
@@ -40,7 +41,7 @@ Vanguard utilizes PostgreSQL native features for task queuing and state manageme
 /
 ├── core/           # Backend Engine (DB, Security, AI, Browser)
 ├── modules/        # Domain Logic (Profile, Agent, Generator)
-├── UI/             # React + Tailwind Frontend
+├── UI/             # Single-page HTML Monitoring Interface
 ├── migrations/     # Alembic DB Scripts
 └── tests/          # Unit/Integration/E2E Suite
 ```
