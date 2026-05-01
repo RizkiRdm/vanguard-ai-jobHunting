@@ -1,0 +1,31 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install ruff && ruff check . && ruff format --check .
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e . && pytest tests/unit/ -v
+  integration-test:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:15
+        env: {POSTGRES_DB: vanguard, POSTGRES_PASSWORD: password}
+        ports: ['5432:5432']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e . && alembic upgrade head && pytest tests/integration/ -v
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/vanguard
