@@ -19,13 +19,40 @@ router = APIRouter(prefix="/agent", tags=["Agent Automation"])
 log = logger.bind(service="agent_router")
 
 
+from jose import jwt, JWTError
+from fastapi import (
+    APIRouter,
+    Depends,
+    Response,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+    Query,
+)
+
+# ... (other imports)
+from core.security import JWT_SECRET_KEY, ALGORITHM
+
+# ...
+
 @router.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: str):
-    """Real-time stream connection for frontend."""
+async def websocket_endpoint(
+    websocket: WebSocket, 
+    user_id: str, 
+    token: str = Query(...)
+):
+    """Real-time stream connection with JWT handshake."""
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("sub") != user_id:
+            raise HTTPException(status_code=403)
+    except (JWTError, HTTPException):
+        await websocket.close(code=1008)
+        return
+
     await manager.connect(websocket, user_id)
     try:
         while True:
-            # Tetap terbuka, biarkan manager yang mengirim pesan dari orchestrator
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket, user_id)

@@ -34,7 +34,10 @@
     </div>
 
     <script>
-        const ws = new WebSocket(`ws://${window.location.host}/agent/ws/user1?token=mocktoken`);
+        // Retrieve JWT token from cookie or local storage (simplified for demo)
+        const token = document.cookie.replace(/(?:(?:^|.*;\s*)access_token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+        const ws = new WebSocket(`ws://${window.location.host}/agent/ws/user1?token=${token}`);
+        
         ws.onopen = () => document.getElementById('status-badge').innerText = 'Connected';
         ws.onmessage = (event) => {
             const log = document.getElementById('log-panel');
