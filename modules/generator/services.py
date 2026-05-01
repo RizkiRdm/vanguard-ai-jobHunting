@@ -1,5 +1,6 @@
 import uuid
-import anyio  # Untuk proteksi timeout
+import anyio
+from sqlalchemy.ext.asyncio import AsyncSession
 from core.ai_agent import VanguardAI
 from modules.generator.models import TailoredDocument, LLMUsageLog
 from core.custom_logging import logger
@@ -8,6 +9,7 @@ log = logger.bind(service="generator_service")
 
 
 async def generate_tailored_document(
+    db: AsyncSession,
     user_id: str,
     task_id: str,
     job_context: str,
@@ -51,14 +53,16 @@ async def generate_tailored_document(
 
         # Audit usage before saving main doc
         usage = response.usage_metadata
-        await LLMUsageLog.create(
+        llm_usage = LLMUsageLog(
             user_id=uuid.UUID(user_id),
             model_name=ai.model_id,
             total_tokens=usage.total_token_count,
         )
+        db.add(llm_usage)
+        await db.commit()
 
         # Persistence
-        doc = await TailoredDocument.create(
+        doc = TailoredDocument(
             id=uuid.uuid4(),
             user_id=uuid.UUID(user_id),
             task_id=uuid.UUID(task_id),
@@ -66,6 +70,9 @@ async def generate_tailored_document(
             content=response.text,
             token_cost=usage.total_token_count,
         )
+        db.add(doc)
+        await db.commit()
+        await db.refresh(doc)
 
         log.info("document_ready", task_id=task_id, tokens=usage.total_token_count)
         return doc
@@ -74,5 +81,6 @@ async def generate_tailored_document(
         log.error("ai_timeout", task_id=task_id)
         raise Exception("AI took too long to respond.")
     except Exception as e:
+        await db.rollback()
         log.error("doc_gen_failure", error=str(e), task_id=task_id)
         raise
