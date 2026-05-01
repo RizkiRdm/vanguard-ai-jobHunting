@@ -53,7 +53,6 @@ class VanguardWorker:
                             task_id=str(task.id),
                             user_id=str(task.user_id),
                             task_type=task.task_type,
-                            bound_logger=worker_log,
                         )
 
                         # 3. Finalize status

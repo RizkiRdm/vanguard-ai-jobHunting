@@ -28,9 +28,16 @@ class UserProfile(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
+    full_name: Mapped[str] = mapped_column(String(255), nullable=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=True)
+    phone: Mapped[str] = mapped_column(String(50), nullable=True)
     starter_cv_path: Mapped[str] = mapped_column(String(512), nullable=True)
     summary: Mapped[str] = mapped_column(nullable=True)
     target_role: Mapped[str] = mapped_column(String(255), nullable=True)
     expected_salary: Mapped[str] = mapped_column(String(100), nullable=True)
+    skills: Mapped[str] = mapped_column(nullable=True)  # Stored as comma-separated or JSON
+    experience_years: Mapped[int] = mapped_column(Integer, nullable=True)
+    location: Mapped[str] = mapped_column(String(255), nullable=True)
+    resume_url: Mapped[str] = mapped_column(String(512), nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="profile")
