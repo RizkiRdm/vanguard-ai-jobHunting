@@ -2,6 +2,7 @@ import time
 import asyncio
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from modules.profile.profile_router import router as profile_router
 from modules.agent.agent_router import router as agent_router
@@ -17,6 +18,9 @@ def create_application() -> FastAPI:
 
     application.include_router(profile_router)
     application.include_router(agent_router)
+    
+    # Mount UI as static
+    application.mount("/", StaticFiles(directory="UI", html=True), name="ui")
 
     @application.on_event("startup")
     async def startup_event():
