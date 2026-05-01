@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: vanguard
+      POSTGRES_PASSWORD: password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/vanguard
+    depends_on:
+      db:
+        condition: service_healthy
+  worker:
+    build: .
+    command: python core/worker.py
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/vanguard
+    depends_on:
+      db:
+        condition: service_healthy
