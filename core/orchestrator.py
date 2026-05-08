@@ -108,6 +108,7 @@ class JobOrchestrator:
                         screenshot_path=screenshot,
                         goal=application_goal,
                         user_id=user_id,
+                        session=db,
                         history=history,
                     )
 

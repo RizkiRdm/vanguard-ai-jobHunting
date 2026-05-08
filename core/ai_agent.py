@@ -21,29 +21,31 @@ class VanguardAI:
         self.model_id = "gemini-2.0-flash"
         self.log = logger.bind(service="vanguard-ai")
 
-    async def check_budget_limit(self, user_id: str) -> bool:
+    async def check_budget_limit(self, user_id: str, session: Any) -> bool:
         """Memastikan user tidak melebihi budget harian (contoh: 10M tokens)."""
-        from tortoise.functions import Sum
+        from sqlalchemy import select, func
         from datetime import datetime, timezone
 
         today = datetime.now(timezone.utc).date()
-        usage = (
-            await LLMUsageLog.filter(user_id=user_id, created_at__gte=today)
-            .annotate(total=Sum("total_tokens"))
-            .first()
+        
+        stmt = select(func.sum(LLMUsageLog.total_tokens)).where(
+            LLMUsageLog.user_id == uuid.UUID(user_id),
+            func.date(LLMUsageLog.timestamp) >= today
         )
+        result = await session.execute(stmt)
+        total_usage = result.scalar() or 0
 
-        if usage and usage.total and usage.total > 10_000_000:
-            self.log.error("budget_exceeded", user_id=user_id, total_used=usage.total)
+        if total_usage > 10_000_000:
+            self.log.error("budget_exceeded", user_id=user_id, total_used=total_usage)
             return False
         return True
 
     async def analyze_screen(
-        self, screenshot_path: str, goal: str, user_id: str, history: List[Dict] = None
+        self, screenshot_path: str, goal: str, user_id: str, session: Any, history: List[Dict] = None
     ) -> Dict[str, Any]:
         """Multimodal ReAct analysis dengan Budgeting dan Error Handling presisi."""
         # 1. Budget Check
-        if not await self.check_budget_limit(user_id):
+        if not await self.check_budget_limit(user_id, session):
             return {
                 "action": "FAIL",
                 "reason": "Daily token budget exceeded. Bot stopped to save costs.",
@@ -79,7 +81,7 @@ class VanguardAI:
             if not response or not response.text:
                 raise ValueError("LLM returned an empty response body.")
 
-            await self._log_token_usage(response, user_id)
+            await self._log_token_usage(response, user_id, session)
             return self._parse_structured_response(response.text)
 
         except FileNotFoundError as fnf_error:
@@ -109,16 +111,18 @@ class VanguardAI:
             self.log.error("json_parse_error", raw_text=text, error=str(jde))
             return {"action": "FAIL", "reason": "AI failed to format JSON correctly."}
 
-    async def _log_token_usage(self, response: Any, user_id: str) -> None:
+    async def _log_token_usage(self, response: Any, user_id: str, session: Any) -> None:
         """Pencatatan token untuk penegakan Budget Cap."""
         try:
             usage = response.usage_metadata
-            await LLMUsageLog.create(
+            log = LLMUsageLog(
                 user_id=uuid.UUID(user_id),
                 model_name=self.model_id,
                 prompt_tokens=usage.prompt_token_count,
                 completion_tokens=usage.candidates_token_count,
                 total_tokens=usage.total_token_count,
             )
+            session.add(log)
+            await session.commit()
         except AttributeError as attr_err:
             self.log.warning("usage_metadata_missing", error=str(attr_err))
