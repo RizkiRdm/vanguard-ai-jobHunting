@@ -1,41 +1,34 @@
 import uuid
 import json
 from sqlalchemy import select, update, text
+from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import AsyncSessionLocal
 from modules.agent.models import AgentTask, TaskStatus
 
 
-async def claim_next_task() -> AgentTask | None:
+async def claim_next_task(session: AsyncSession) -> AgentTask | None:
     """
     Claims the next available task using Pessimistic Locking (FOR UPDATE).
     Ensures no double-processing in a concurrent environment.
     """
-    async with AsyncSessionLocal() as session:
-        async with session.begin():
-            # Finding parents that are NOT completed
-            active_parents_stmt = select(AgentTask.id).where(
-                AgentTask.status.in_([TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.AWAIT_USER])
-            )
+    # SELECT FOR UPDATE SKIP LOCKED
+    stmt = (
+        select(AgentTask)
+        .where(
+            AgentTask.status == TaskStatus.QUEUED
+        )
+        .order_by(AgentTask.created_at)
+        .limit(1)
+        .with_for_update(skip_locked=True)
+    )
 
-            # SELECT FOR UPDATE SKIP LOCKED
-            stmt = (
-                select(AgentTask)
-                .where(
-                    AgentTask.status == TaskStatus.QUEUED,
-                    ~AgentTask.parent_id.in_(active_parents_stmt)
-                )
-                .order_by(AgentTask.created_at)
-                .limit(1)
-                .with_for_update(skip_locked=True)
-            )
+    result = await session.execute(stmt)
+    task = result.scalar_one_or_none()
 
-            result = await session.execute(stmt)
-            task = result.scalar_one_or_none()
-
-            if task:
-                task.status = TaskStatus.RUNNING
-                # session.begin() will commit automatically
-                return task
+    if task:
+        task.status = TaskStatus.RUNNING
+        await session.commit()
+        return task
 
     return None
 
