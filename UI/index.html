@@ -36,7 +36,23 @@
     <script>
         // Retrieve JWT token from cookie or local storage (simplified for demo)
         const token = document.cookie.replace(/(?:(?:^|.*;\s*)access_token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
-        const ws = new WebSocket(`ws://${window.location.host}/agent/ws/user1?token=${token}`);
+        
+        // Decode JWT to get user_id (sub claim)
+        function getUserIdFromToken(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload).sub;
+            } catch (e) {
+                return null;
+            }
+        }
+        
+        const userId = getUserIdFromToken(token);
+        const ws = new WebSocket(`ws://${window.location.host}/agent/ws/${userId}?token=${token}`);
         
         ws.onopen = () => document.getElementById('status-badge').innerText = 'Connected';
         ws.onmessage = (event) => {
