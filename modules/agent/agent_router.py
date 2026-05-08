@@ -92,7 +92,7 @@ async def trigger_discovery(
         user_id=user_id,
         task_type="DISCOVERY",
         status=TaskStatus.QUEUED.value,
-        metadata={"mode": "dorking"},
+        meta_data={"mode": "dorking"},
     )
     db.add(task)
     await db.commit()
@@ -136,9 +136,9 @@ async def get_task_screenshot(
 ):
     result = await db.execute(select(AgentTask).filter_by(id=task_id, user_id=user_id))
     task = result.scalar_one_or_none()
-    if not task or "last_screenshot" not in task.meta_data:
+    if not task or not task.last_screenshot_path:
         raise HTTPException(status_code=404, detail="No screenshot available")
-    return FileResponse(task.meta_data["last_screenshot"])
+    return FileResponse(task.last_screenshot_path)
 
 
 @router.post("/tasks/{task_id}/stop")
