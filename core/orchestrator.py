@@ -103,6 +103,20 @@ class JobOrchestrator:
                     screenshot = await self.browser.take_screenshot(
                         f"{task_id}_step_{step}"
                     )
+                    
+                    # Convert screenshot path to base64 for UI
+                    import base64
+                    screenshot_b64 = ""
+                    if Path(screenshot).exists():
+                        with open(screenshot, "rb") as f:
+                            screenshot_b64 = base64.b64encode(f.read()).decode('utf-8')
+
+                    # Notify UI of new step
+                    from core.websocket_manager import manager
+                    await manager.send_personal_message({
+                        "message": f"Step {step}: Analyzing screen...",
+                        "screenshot": screenshot_b64
+                    }, user_id)
 
                     decision = await self.ai.analyze_screen(
                         screenshot_path=screenshot,
@@ -125,6 +139,13 @@ class JobOrchestrator:
                         await update_task_status(
                             task_id, TaskStatus.AWAITING_USER, error=decision.get("reason")
                         )
+                        # Notify UI for input
+                        from core.websocket_manager import manager
+                        await manager.send_personal_message({
+                            "message": f"Input required: {decision.get('reason')}",
+                            "require_input": True
+                        }, user_id)
+                        
                         return {
                             "status": "waiting_for_user",
                             "question": decision.get("reason"),

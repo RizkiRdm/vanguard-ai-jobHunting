@@ -27,9 +27,17 @@
                 </thead>
                 <tbody id="task-list"></tbody>
             </table>
+            <!-- HITL Panel -->
+            <div id="hitl-panel" class="mt-6 bg-white p-4 rounded shadow hidden">
+                <h3 class="font-bold mb-2">Human Interaction Required</h3>
+                <input type="text" id="hitl-input" class="border p-2 w-full mb-2" placeholder="Provide input...">
+                <button onclick="sendHitlInput()" class="bg-green-600 text-white px-4 py-2 rounded">Submit</button>
+            </div>
         </div>
         <div class="w-1/3">
-            <div class="bg-black text-green-400 p-4 h-96 overflow-y-scroll" id="log-panel"></div>
+            <div class="bg-gray-800 text-white p-2 mb-2 rounded text-sm">Preview</div>
+            <img id="browser-screenshot" class="w-full h-64 bg-gray-200 mb-4 object-contain border" src="" alt="Browser Preview">
+            <div class="bg-black text-green-400 p-4 h-64 overflow-y-scroll text-xs" id="log-panel"></div>
         </div>
     </div>
 
@@ -56,12 +64,23 @@
         
         ws.onopen = () => document.getElementById('status-badge').innerText = 'Connected';
         ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
             const log = document.getElementById('log-panel');
-            log.innerHTML += `<div>${event.data}</div>`;
+            log.innerHTML += `<div>${data.message || event.data}</div>`;
+            
+            if (data.screenshot) {
+                document.getElementById('browser-screenshot').src = `data:image/png;base64,${data.screenshot}`;
+            }
+            
+            if (data.require_input) {
+                document.getElementById('hitl-panel').classList.remove('hidden');
+            }
         };
 
-        function startAgent() {
-            fetch('/agent/scrape', { method: 'POST' });
+        function sendHitlInput() {
+            const input = document.getElementById('hitl-input').value;
+            ws.send(JSON.stringify({ type: 'hitl_input', content: input }));
+            document.getElementById('hitl-panel').classList.add('hidden');
         }
     </script>
 </body>

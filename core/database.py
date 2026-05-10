@@ -5,18 +5,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Standard DSN (e.g., for asyncpg or psql)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Normalize scheme for SQLAlchemy async engine
-if DATABASE_URL:
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
-    elif DATABASE_URL.startswith("postgres+asyncpg://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres+asyncpg://", "postgresql+asyncpg://", 1)
-    elif DATABASE_URL.startswith("postgresql://"):
-        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+# SQLAlchemy requires postgresql+asyncpg:// for async engines
+SQLA_DATABASE_URL = DATABASE_URL
+if SQLA_DATABASE_URL and SQLA_DATABASE_URL.startswith("postgresql://"):
+    SQLA_DATABASE_URL = SQLA_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif SQLA_DATABASE_URL and SQLA_DATABASE_URL.startswith("postgres://"):
+    SQLA_DATABASE_URL = SQLA_DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
 
-engine = create_async_engine(DATABASE_URL, echo=True)
+engine = create_async_engine(SQLA_DATABASE_URL, echo=True)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 class Base(DeclarativeBase):

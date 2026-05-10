@@ -39,7 +39,3 @@ dependencies = [
     "alembic>=1.18.4",
     "typer>=0.15.1",
 ]
-
-tortoise_orm = "core.database.TORTOISE_CONFIG"
-location = "./migrations"
-src_folder = "./."
