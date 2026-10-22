@@ -60,10 +60,10 @@ Queries go through Drizzle (`apps/server/src/db/schema.ts` mirrors these tables 
 typing). The SQL files stay authoritative: RLS, triggers and the queue functions
 cannot be expressed in Drizzle, so do not use `drizzle-kit push`.
 
-If the project is reachable only through the Supabase dashboard or the MCP server,
-apply the same files there with `apply_migration` in filename order, then keep
-`public.schema_migrations` consistent or run `npm run db:migrate` once the
-connection string is available.
+If you can reach the project only through the Supabase dashboard, paste each file
+into the SQL editor in filename order. If you do that, `public.schema_migrations`
+is not written, so a later `npm run db:migrate` will try to apply the same DDL
+again and fail. Prefer the pooler URL and the command above.
 
 What the migrations create:
 
@@ -132,16 +132,16 @@ is not running or cannot reach the database; check its log output first.
 
 ## 7. Common problems
 
-| Symptom                                | Cause                                                          | Fix                                                                                         |
-| -------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Startup lists missing env fields       | Zod env validation                                             | Fill those fields in `.env`; nothing is defaulted                                           |
-| `/ready` returns 503                   | `DATABASE_URL` wrong, password not set, or pooler region wrong | Copy the pooler string from the dashboard, keep `?sslmode=require`                          |
-| Upload returns 415                     | File is not a real PDF                                         | The server checks the `%PDF-` header, not just the extension                                |
-| Task stuck in `queued`                 | Worker down, or lease logic never ran                          | Start `npm run worker`; after `TASK_LEASE_SECONDS` a stale claim is requeued                |
-| Task stuck in `running`                | Worker died mid-task                                           | Wait for the lease to expire; `reclaim_expired_tasks` requeues it, then retries are bounded |
-| Browser fails to launch in a container | Missing shared libraries or sandbox                            | `npx playwright install --with-deps chromium`; `--no-sandbox` is already passed             |
-| Web build fails on env                 | `PUBLIC_*` / `API_BASE_URL` missing at build time              | Set them in the build environment, they are validated at build and start                    |
-| 401 from the web app                   | Session cookie expired                                         | Sign in again; tokens are short lived and there is no refresh-token design yet              |
+| Symptom                                | Cause                                                                | Fix                                                                                         |
+| -------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Startup lists missing env fields       | Zod env validation                                                   | Fill those fields in `.env`; nothing is defaulted                                           |
+| `/ready` returns 503                   | `DATABASE_URL` wrong, password not set, or pooler region wrong       | Copy the pooler string from the dashboard, keep `?sslmode=require`                          |
+| Upload returns 415                     | File is not a real PDF                                               | The server checks the `%PDF-` header, not just the extension                                |
+| Task stuck in `queued`                 | Worker down, or lease logic never ran                                | Start `npm run worker`; after `TASK_LEASE_SECONDS` a stale claim is requeued                |
+| Task stuck in `running`                | Worker died mid-task                                                 | Wait for the lease to expire; `reclaim_expired_tasks` requeues it, then retries are bounded |
+| Browser fails to launch in a container | Missing shared libraries or sandbox                                  | `npx playwright install --with-deps chromium`; `--no-sandbox` is already passed             |
+| Web build fails on env                 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` or `API_BASE_URL` missing | Set them in the build environment; `apps/web/src/env.ts` validates at build and start       |
+| 401 from the web app                   | Session cookie expired                                               | Sign in again; tokens are short lived and there is no refresh-token design yet              |
 
 ## 8. Deployment notes
 

@@ -37,7 +37,7 @@ apps/server/
   src/db/schema.ts        typed mirror of the SQL migrations (query types only)
 packages/contracts/       shared Zod schemas and types
 supabase/migrations/      schema, SQL functions, RLS policies (apply in name order)
-docs/                     architecture, setup, audit
+docs/                     architecture, setup, reference, audit
 ```
 
 ## 3. Quick start
@@ -88,8 +88,11 @@ All four must pass before you call work done.
 
 ## 6. Data rules
 
-- Schema changes go in a new file in `supabase/migrations/`. Never edit a
-  migration that has been applied to a database; add a new one.
+- Schema changes go in a new file in `supabase/migrations/`. Apply them with
+  `npm run db:migrate`. `drizzle-kit migrate` and `drizzle-kit push` are not used:
+  RLS, triggers, grants and the queue functions cannot be expressed in
+  `src/db/schema.ts`, which is a type mirror only. Never edit a migration that has
+  been applied to a database; add a new one.
 - Keep `claim_task`, `heartbeat_task`, `finish_task`, `retry_task`,
   `reserve_llm_tokens`, `settle_llm_tokens` and `consume_rate_limit` atomic. Do
   not replace them with check-then-write code in TypeScript.

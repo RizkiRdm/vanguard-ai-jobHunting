@@ -51,9 +51,17 @@ token verification. The browser uses the publishable key for sign-in and gets re
 access through short-lived signed URLs.
 
 Migrations are plain SQL files in `supabase/migrations`, applied in filename order
-and recorded in `public.schema_migrations`. Supabase also keeps its own migration
-history when changes are applied through the MCP server or the CLI, so pick one
-path per environment and keep the two records identical.
+and recorded in `public.schema_migrations` by `npm run db:migrate`. Supabase also
+keeps its own migration history when changes are applied through the dashboard or
+the CLI, so pick one path per environment and keep the two records identical.
+
+Drizzle is the query layer, not the migration tool. `drizzle-kit` can describe
+tables, but not RLS policies, `WITH CHECK` clauses, triggers, `SECURITY DEFINER`
+functions, grants or the Storage bucket, and `drizzle-kit migrate` keeps its own
+journal. Letting it own this schema would either drop the security model or re-run
+DDL that is already applied. `supabase/migrations` stays the source of truth and
+`apps/server/src/db/schema.ts` mirrors it for types only; see
+[REFERENCE.md](REFERENCE.md#sql-functions) for the function list.
 
 RLS and grants are part of the security model:
 

@@ -1,166 +1,107 @@
 # Vanguard
 
-An AI job hunting assistant that finds real job listings, drafts application
-material, and fills in application forms in a real browser — then stops and waits
-for you to approve the submission.
+An AI job hunting assistant. It discovers real job listings, prepares application
+material from your profile, and fills in application forms in a real browser. It
+stops before submitting and waits for your approval.
 
-Vanguard is not an auto-applier. The agent can click, type, select and upload a
-resume, but the task parks as `waiting_for_user` the moment a form looks
-submittable. Nothing leaves your account until you approve it.
-
-> [!NOTE]
-> Status: MVP. The stack, schema and API are complete; the project is not deployed
-> and the browser flows have not been exercised against live job sites. See
-> [`docs/AUDIT.md`](docs/AUDIT.md) for what is proven and what is not.
+> **Status: MVP, not deployed.** The schema, RLS policies and storage bucket are
+> applied to one hosted Supabase project and the API, worker and web app run
+> locally. No browser workflow has been exercised against a live job site yet, and
+> nothing is hosted. See [docs/AUDIT.md](docs/AUDIT.md) for what is proven and what
+> is not.
 
 ## What it does
 
-- **Discover jobs** — a Playwright task searches public listings and stores the
-  results it actually saw. No invented companies, titles or salaries.
-- **Prepare an application** — a Gemini-driven agent reads the page, fills the
-  visible form fields, and stops at the submit button.
-- **Ask before submitting** — the task pauses with a reason and the details the
-  agent found; approving it from the UI is the only way the submission proceeds.
-- **Stay recoverable** — every task lives in Postgres, claims atomically, holds a
-  lease with a heartbeat, and is requeued if a worker dies.
-- **Control cost** — per-user daily token budget and per-user rate limits are
-  enforced by single SQL statements, so concurrent requests cannot overspend.
+- **Discovery** — searches DuckDuckGo's HTML results for a query and stores the
+  listings it actually saw. Nothing is invented; an empty result stays empty.
+- **Applications** — opens the listing in Playwright, decides each step from a
+  screenshot, and fills fields using your profile and resume. The model is never
+  allowed to click submit.
+- **Approval gate** — when the form is filled, the task parks in
+  `waiting_for_user` and shows you the step it wants to take. Only your approval
+  re-queues it, and only then does the worker click the captured submit selector.
+- **Durable tasks** — every task lives in Postgres, is claimed with
+  `SELECT … FOR UPDATE SKIP LOCKED`, and holds a lease. A crashed worker's task is
+  reclaimed, retried with backoff, or failed after the attempt limit.
 
 ## Stack
 
-| Layer     | Choice                                                         |
-| --------- | -------------------------------------------------------------- |
-| Web       | SvelteKit 3, Svelte 5, TypeScript strict                       |
-| API       | Hono on Node.js                                                |
-| Worker    | Same codebase, separate process, Postgres-backed queue         |
-| Browser   | Playwright Chromium                                            |
-| Database  | Supabase Postgres — schema, RLS, SQL functions for the queue   |
-| Auth      | Supabase Auth, session in HttpOnly cookies via `@supabase/ssr` |
-| Storage   | Supabase Storage, private `resumes` bucket, signed URLs        |
-| AI        | Google Gemini (`@google/genai`)                                |
-| Contracts | Zod schemas shared by web and server                           |
+| Layer      | Choice                                                         |
+| ---------- | -------------------------------------------------------------- |
+| Web        | SvelteKit 3, Svelte 5, TypeScript strict                       |
+| API + jobs | Hono on Node.js 22, separate API and worker entry points       |
+| Database   | Supabase Postgres, Drizzle as the query layer, SQL migrations  |
+| Auth       | Supabase Auth; server verifies tokens against the project JWKS |
+| Files      | Supabase Storage, private bucket, signed URLs only             |
+| Browser    | Playwright (Chromium)                                          |
+| AI         | Google Gemini, JSON-validated responses, token budget          |
 
-## Architecture
+The web app never calls the API from the browser: SvelteKit server code holds the
+session cookie and forwards requests with the user's bearer token.
 
-```text
-browser ──► SvelteKit (session cookie, auth guard)
-              │  bearer token
-              ▼
-            Hono API ──► Postgres ◄── Worker ──► Playwright ──► job site
-              │            │  ▲         │
-              └────────────┘  └─────────┘  └──► Gemini (structured JSON)
-                   Supabase Auth / Storage
-```
-
-- The browser never talks to the API directly and never sees a token in a URL.
-- The API and worker share code but run as separate processes; only the worker
-  runs Chromium.
-- Business rules live in services, SQL lives in repositories, route handlers stay
-  thin. Shared request/response shapes live in `packages/contracts`.
-
-Task lifecycle:
-
-```text
-queued ──► running ──► succeeded
-              │  ▲
-              │  └── waiting_for_user ──► queued   (approval or answer)
-              └──► failed / cancelled
-```
-
-Workers claim with `SELECT … FOR UPDATE SKIP LOCKED`, renew a lease while working,
-and `reclaim_expired_tasks()` requeues anything abandoned. Retries are bounded
-with backoff.
-
-## Requirements
-
-- Node.js 22 or newer (`@supabase/server` requires it)
-- A Supabase project (Postgres, Auth, Storage)
-- A Gemini API key
-- Chromium for Playwright: `npx playwright install chromium --with-deps`
-
-## Setup
+## Five minute path
 
 ```bash
 npm install
-cp .env.example .env      # then fill in the values
-npm run db:migrate        # schema, SQL functions, RLS, private resumes bucket
+cp .env.example .env      # fill in Supabase, Gemini and the pooler URL
+npm run db:migrate        # applies supabase/migrations/*.sql in order
 ```
 
-Full details, including the exact environment variables and how to provision the
-database with or without the Supabase CLI, are in [`docs/SETUP.md`](docs/SETUP.md).
-
-> [!IMPORTANT]
-> `apps/web/src/env.ts` validates `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`
-> and `API_BASE_URL` at build and start time. A missing value fails on purpose; no
-> fallback secrets exist anywhere in this project.
-
-## Development
-
-Three processes, three terminals:
+Then, in three terminals:
 
 ```bash
-npm run dev:web      # http://localhost:5173
-npm run dev:server   # http://localhost:8000
-npm run worker       # background task worker (needs Chromium)
+npm run dev:web           # http://localhost:5173
+npm run dev:server        # http://localhost:8000
+npm run worker            # browser + AI work
 ```
+
+Create an account on the login page, fill in your profile, upload a PDF resume,
+then start a discovery task from the dashboard.
+
+Full instructions, including how to get each environment value: [docs/SETUP.md](docs/SETUP.md).
 
 ## Checks
 
 ```bash
-npm run typecheck    # tsc -p apps/server && svelte-check
-npm run lint
-npm test             # vitest
-npm run build        # SvelteKit production build
+npm run typecheck         # tsc (server) + svelte-check (web)
+npm run lint              # eslint
+npm test                  # vitest
+npm run build             # adapter-node build of the web app
 ```
 
-The SQL layer has an integration test that runs only against a real database:
+All four pass on the current commit. The database integration tests skip unless
+`TEST_DATABASE_URL` points at a Postgres with `supabase/local-stub.sql` applied.
 
-```bash
-psql "$TEST_DATABASE_URL" -f supabase/local-stub.sql
-npm run db:migrate
-TEST_DATABASE_URL=postgres://... npx vitest run \
-  apps/server/src/modules/tasks/repository.integration.test.ts
+## Layout
+
+```
+apps/web/                SvelteKit UI (routes, server actions, session cookie)
+apps/server/src/         Hono API, worker, modules, infrastructure
+packages/contracts/      Zod schemas and types shared by web and server
+supabase/migrations/     schema, SQL functions, RLS policies, storage bucket
+supabase/local-stub.sql  auth/storage stubs so migrations run on plain Postgres
+docs/                    setup, architecture, reference, audit
 ```
 
-It covers atomic claiming, lease ownership, the approval flow and per-user
-isolation. Without `TEST_DATABASE_URL` the file is skipped.
+## Security model
 
-## Security notes
-
-- Identity is taken only from a verified Supabase access token. A user id in a
-  body, query string or header is never treated as proof of identity.
-- Every user-owned query filters on the authenticated user id. The secret key
-  bypasses RLS, so RLS is defence in depth, not the authorization layer.
-- Row Level Security is enabled on all user tables, policies are scoped
-  `to authenticated` and include `WITH CHECK`.
-- `EXECUTE` on the queue, budget and rate-limit functions is revoked from `anon`
-  and `authenticated`; only `service_role` can call them.
-- Resumes are PDF-only, capped at 10 MB, checked for the `%PDF-` magic bytes,
-  stored under server-generated names in a private bucket, and served through
-  short-lived signed URLs.
-- Browser session state lives in `.browser-state/` (credentials, gitignored) and is
-  never served, logged or committed.
-- Page content is treated as untrusted input and cannot change the agent's rules.
-
-## Deployment
-
-Two long-running Node processes plus the web app:
-
-```bash
-npm run build                    # apps/web -> apps/web/build
-node apps/web/build              # web
-npx tsx apps/server/src/api.ts   # API
-npx tsx apps/server/src/worker.ts
-```
-
-Supabase hosts Postgres, Auth and Storage; it does not run the browser worker. Use
-a host that keeps a process alive and allows Chromium (1 GB RAM minimum, writable
-`.browser-state/`), set `WEB_ORIGIN` to the real frontend origin, and keep
-`SUPABASE_SECRET_KEY` server-side only. Nothing has been deployed yet.
+- Identity comes only from a verified Supabase access token checked against the
+  project JWKS. A user id in a body, query string or header is never trusted.
+- Every user-owned query filters on the authenticated user id; the secret key
+  bypasses RLS, so RLS is a backstop, not the authorization.
+- Resumes are validated by size, MIME type and `%PDF-` magic bytes, stored under a
+  server-generated name in a private bucket, and served through 60 second signed
+  URLs.
+- Browser state in `.browser-state/` is credentials: gitignored, never served, never
+  logged.
+- Page content and job descriptions are untrusted input. They cannot change agent
+  rules, reveal secrets or trigger unrelated actions.
+- No hardcoded or fallback secrets; a missing variable aborts startup.
 
 ## Documentation
 
-- [`docs/SETUP.md`](docs/SETUP.md) — provisioning, environment, troubleshooting
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — processes, data model, task queue, browser rules
-- [`docs/AUDIT.md`](docs/AUDIT.md) — defects found in the Python implementation and what replaced them
-- [`AGENTS.md`](AGENTS.md) — rules, guardrails and gotchas for humans and AI agents
+- [docs/SETUP.md](docs/SETUP.md) — install, configure, migrate, run, troubleshoot
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how the pieces fit and why
+- [docs/REFERENCE.md](docs/REFERENCE.md) — endpoints, environment variables, SQL functions
+- [docs/AUDIT.md](docs/AUDIT.md) — what the Python version got wrong and how it was fixed
+- [AGENTS.md](AGENTS.md) — rules for coding agents working in this repository

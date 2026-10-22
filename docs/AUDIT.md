@@ -2,7 +2,9 @@
 
 Scope: the FastAPI/SQLAlchemy implementation that existed before the TypeScript
 rewrite (~1,900 lines: `main.py`, `core/`, `modules/`, `shared/`, `UI/`, `tests/`).
-Every item below was confirmed by reading the code, then fixed or removed.
+Every item below was confirmed by reading the code, then fixed or removed. The
+current surface (endpoints, env, SQL functions) is in [REFERENCE.md](REFERENCE.md);
+how the pieces fit is in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Authentication and authorization
 
@@ -32,19 +34,20 @@ Every item below was confirmed by reading the code, then fixed or removed.
 
 ## Files and logs
 
-| Finding                                                     | Evidence                               | Resolution                                                                                                                 |
-| ----------------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Upload validation trusted the client MIME type, no size cap | `modules/profile/profile_router.py`    | 10 MB cap, `application/pdf` check, `%PDF-` magic-byte check, server-generated object name.                                |
-| Files stored under predictable local paths                  | `storage/resumes/{user_id}_resume.pdf` | Private Supabase bucket, `${userId}/${uuid}.pdf`, 60 s signed URLs only.                                                   |
-| VirusTotal scanner existed but was never called             | `core/security.py` `MalwareScanner`    | Removed. The scanner was unreachable dead code; format and size checks remain.                                             |
-| SQL echo logging was on                                     | `core/database.py` `echo=True`         | `postgres.js` with `onnotice` suppressed; structured logger redacts secrets, tokens, cookies, CV and cover-letter content. |
-| Browser session state kept indefinitely on disk             | `storage/sessions/auth_*.json`         | Per-user state in `.browser-state/` with 0700/0600 permissions, never served over HTTP. Removed the legacy files.          |
+| Finding                                                     | Evidence                               | Resolution                                                                                                                              |
+| ----------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Upload validation trusted the client MIME type, no size cap | `modules/profile/profile_router.py`    | 10 MB cap, `application/pdf` check, `%PDF-` magic-byte check, server-generated object name.                                             |
+| Files stored under predictable local paths                  | `storage/resumes/{user_id}_resume.pdf` | Private Supabase bucket, `${userId}/${uuid}.pdf`, 60 s signed URLs only.                                                                |
+| VirusTotal scanner existed but was never called             | `core/security.py` `MalwareScanner`    | Removed. The scanner was unreachable dead code; format and size checks remain.                                                          |
+| SQL echo logging was on                                     | `core/database.py` `echo=True`         | Drizzle over `postgres.js` with `onnotice` suppressed; structured logger redacts secrets, tokens, cookies, CV and cover-letter content. |
+| Browser session state kept indefinitely on disk             | `storage/sessions/auth_*.json`         | Per-user state in `.browser-state/` with 0700/0600 permissions, never served over HTTP. Removed the legacy files.                       |
 
 ## Hardening found while standing up Supabase
 
 These are not legacy defects; they are Supabase defaults that would have left the
-new schema weaker than intended. They were confirmed on a local Postgres 16 with
-the stubs in `supabase/local-stub.sql`.
+new schema weaker than intended. They were first reproduced on a local Postgres 16
+with the stubs in `supabase/local-stub.sql`, and the fixes are present in the
+migrations now applied to the hosted project.
 
 | Finding                                                                       | Why it matters                                                                                                                            | Resolution                                                                                                                                        |
 | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -72,7 +75,7 @@ browser modules), and the Python test suite that required a live Postgres.
 | Migrations on a real Postgres 16 | `npm run db:migrate` against a local container with `supabase/local-stub.sql`                                                                            | all 6 files applied, no errors                                                                                                                      |
 | Grants and policy shape          | `has_function_privilege('anon', …)`, `pg_policies`                                                                                                       | `anon` cannot execute any internal function, `service_role` can; policies are `to authenticated` with `with check`                                  |
 | Migrations on the hosted project | `npm run db:migrate` through the Supavisor pooler (`:6543`), then SQL checks via `pg_tables`, `pg_policies`, `has_function_privilege`, `storage.buckets` | 6 migrations applied; 8 tables with RLS on; `anon` cannot execute internal functions, `service_role` can; `resumes` bucket private, PDF-only, 10 MB |
-| Security advisors                | `get_advisors` after applying                                                                                                                            | only the Supabase-managed `rls_auto_enable` helper is reported; nothing from this schema                                                            |
+| Security advisors                | Supabase linter against the hosted project                                                                                                               | was checked while the schema was applied to an earlier project, then reverted with it; not re-run on the current project (the MCP is not used)      |
 | SQL functions                    | `claim_task`, `finish_task`, `request_approval`/`approve_task`, `reclaim_expired_tasks`, `reserve_llm_tokens`, `consume_rate_limit`, RLS                 | exclusive claim, lease-owner guard, approval merge, requeue/fail, budget cap, rate window, per-user isolation all held                              |
 | Repository integration           | `TEST_DATABASE_URL=... npx vitest run apps/server/src/modules/tasks/repository.integration.test.ts`                                                      | 4 passed                                                                                                                                            |
 | API smoke                        | `createApp().fetch` for `/health`, `/ready`, `/tasks`, unknown path, CORS                                                                                | expected status codes and no wildcard origin                                                                                                        |
