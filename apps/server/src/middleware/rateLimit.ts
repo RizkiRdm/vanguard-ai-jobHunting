@@ -1,7 +1,8 @@
 import { createMiddleware } from 'hono/factory';
+import { sql } from 'drizzle-orm';
 import { getEnv } from '../config/env.ts';
 import { AppError } from '../lib/errors.ts';
-import { getDb } from '../lib/db.ts';
+import { getDrizzle } from '../lib/db.ts';
 import type { AppEnv } from '../types.ts';
 
 /**
@@ -13,10 +14,9 @@ export async function consumeRateLimit(
   limit: number,
   windowSeconds: number,
 ): Promise<boolean> {
-  const sql = getDb();
-  const rows = await sql<{ allowed: boolean }[]>`
-    select consume_rate_limit(${key}, ${limit}, ${windowSeconds}) as allowed
-  `;
+  const rows = (await getDrizzle().execute(
+    sql`select consume_rate_limit(${key}, ${limit}, ${windowSeconds}) as allowed`,
+  )) as unknown as Array<{ allowed: boolean }>;
   return rows[0]?.allowed === true;
 }
 

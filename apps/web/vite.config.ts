@@ -3,5 +3,6 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [sveltekit({ adapter: adapter() })],
+  // Read the single .env at the repo root, shared with the API and worker.
+  plugins: [sveltekit({ adapter: adapter(), env: { dir: '../../' } })],
 });

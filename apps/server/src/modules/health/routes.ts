@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import { getDb } from '../../lib/db.ts';
+import { sql } from 'drizzle-orm';
+import { getDrizzle } from '../../lib/db.ts';
 import { getEnv } from '../../config/env.ts';
 import type { AppEnv } from '../../types.ts';
 
@@ -12,7 +13,7 @@ healthRouter.get('/health', (c) =>
 healthRouter.get('/ready', async (c) => {
   const checks: Record<string, 'ok' | 'error'> = { database: 'error' };
   try {
-    await getDb()`select 1`;
+    await getDrizzle().execute(sql`select 1`);
     checks.database = 'ok';
   } catch {
     checks.database = 'error';

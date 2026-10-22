@@ -1,23 +1,7 @@
 import type { Profile, ProfileUpdate } from '@vanguard/contracts';
-import { getDb } from '../../lib/db.ts';
-
-interface ProfileRow {
-  id: string;
-  user_id: string;
-  full_name: string | null;
-  email: string | null;
-  phone: string | null;
-  summary: string | null;
-  target_role: string | null;
-  expected_salary: string | null;
-  skills: string[];
-  experience_years: number | null;
-  location: string | null;
-  resume_path: string | null;
-  resume_filename: string | null;
-  created_at: Date;
-  updated_at: Date;
-}
+import { eq, sql } from 'drizzle-orm';
+import { userProfiles, users, type ProfileRow } from '../../db/schema.ts';
+import { getDrizzle } from '../../lib/db.ts';
 
 function mapProfile(row: ProfileRow): Profile {
   return {
@@ -44,53 +28,49 @@ function mapProfile(row: ProfileRow): Profile {
  * The auth trigger normally creates it; this covers users that predate the trigger.
  */
 export async function ensureUserRow(userId: string, email: string | null): Promise<void> {
-  const sql = getDb();
-  await sql`
-    insert into public.users (id, email)
-    values (${userId}, ${email})
-    on conflict (id) do nothing
-  `;
+  await getDrizzle().insert(users).values({ id: userId, email }).onConflictDoNothing();
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
-  const sql = getDb();
-  const rows = await sql<ProfileRow[]>`
-    select * from public.user_profiles where user_id = ${userId}
-  `;
+  const rows = await getDrizzle()
+    .select()
+    .from(userProfiles)
+    .where(eq(userProfiles.user_id, userId))
+    .limit(1);
   const row = rows[0];
   return row ? mapProfile(row) : null;
 }
 
 export async function upsertProfile(userId: string, update: ProfileUpdate): Promise<Profile> {
-  const sql = getDb();
-  const rows = await sql<ProfileRow[]>`
-    insert into public.user_profiles (user_id, full_name, email, phone, summary,
-                                      target_role, expected_salary, skills,
-                                      experience_years, location)
-    values (
-      ${userId},
-      ${update.full_name ?? null},
-      ${update.email ?? null},
-      ${update.phone ?? null},
-      ${update.summary ?? null},
-      ${update.target_role ?? null},
-      ${update.expected_salary ?? null},
-      ${update.skills ?? sql.array([])},
-      ${update.experience_years ?? null},
-      ${update.location ?? null}
-    )
-    on conflict (user_id) do update set
-      full_name = excluded.full_name,
-      email = excluded.email,
-      phone = excluded.phone,
-      summary = excluded.summary,
-      target_role = excluded.target_role,
-      expected_salary = excluded.expected_salary,
-      skills = excluded.skills,
-      experience_years = excluded.experience_years,
-      location = excluded.location
-    returning *
-  `;
+  const rows = await getDrizzle()
+    .insert(userProfiles)
+    .values({
+      user_id: userId,
+      full_name: update.full_name ?? null,
+      email: update.email ?? null,
+      phone: update.phone ?? null,
+      summary: update.summary ?? null,
+      target_role: update.target_role ?? null,
+      expected_salary: update.expected_salary ?? null,
+      skills: update.skills ?? [],
+      experience_years: update.experience_years ?? null,
+      location: update.location ?? null,
+    })
+    .onConflictDoUpdate({
+      target: userProfiles.user_id,
+      set: {
+        full_name: sql`excluded.full_name`,
+        email: sql`excluded.email`,
+        phone: sql`excluded.phone`,
+        summary: sql`excluded.summary`,
+        target_role: sql`excluded.target_role`,
+        expected_salary: sql`excluded.expected_salary`,
+        skills: sql`excluded.skills`,
+        experience_years: sql`excluded.experience_years`,
+        location: sql`excluded.location`,
+      },
+    })
+    .returning();
   const row = rows[0];
   if (!row) throw new Error('Failed to upsert profile');
   return mapProfile(row);
@@ -101,12 +81,14 @@ export async function setResume(
   resumePath: string | null,
   resumeFilename: string | null,
 ): Promise<void> {
-  const sql = getDb();
-  await sql`
-    insert into public.user_profiles (user_id, resume_path, resume_filename)
-    values (${userId}, ${resumePath}, ${resumeFilename})
-    on conflict (user_id) do update
-      set resume_path = excluded.resume_path,
-          resume_filename = excluded.resume_filename
-  `;
+  await getDrizzle()
+    .insert(userProfiles)
+    .values({ user_id: userId, resume_path: resumePath, resume_filename: resumeFilename })
+    .onConflictDoUpdate({
+      target: userProfiles.user_id,
+      set: {
+        resume_path: sql`excluded.resume_path`,
+        resume_filename: sql`excluded.resume_filename`,
+      },
+    });
 }

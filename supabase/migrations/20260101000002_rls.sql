@@ -22,25 +22,32 @@ begin
   execute 'alter table public.budget_counters enable row level security';
 
   execute 'drop policy if exists users_own on public.users';
-  execute 'create policy users_own on public.users for all using (id = auth.uid()) with check (id = auth.uid())';
+  execute 'create policy users_own on public.users for all to authenticated
+    using ((select auth.uid()) = id) with check ((select auth.uid()) = id)';
 
   execute 'drop policy if exists user_profiles_own on public.user_profiles';
-  execute 'create policy user_profiles_own on public.user_profiles for all using (user_id = auth.uid()) with check (user_id = auth.uid())';
+  execute 'create policy user_profiles_own on public.user_profiles for all to authenticated
+    using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id)';
 
   execute 'drop policy if exists tasks_own on public.tasks';
-  execute 'create policy tasks_own on public.tasks for all using (user_id = auth.uid()) with check (user_id = auth.uid())';
+  execute 'create policy tasks_own on public.tasks for all to authenticated
+    using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id)';
 
   execute 'drop policy if exists jobs_own on public.jobs';
-  execute 'create policy jobs_own on public.jobs for all using (user_id = auth.uid()) with check (user_id = auth.uid())';
+  execute 'create policy jobs_own on public.jobs for all to authenticated
+    using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id)';
 
   execute 'drop policy if exists documents_own on public.documents';
-  execute 'create policy documents_own on public.documents for all using (user_id = auth.uid()) with check (user_id = auth.uid())';
+  execute 'create policy documents_own on public.documents for all to authenticated
+    using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id)';
 
   execute 'drop policy if exists llm_usage_log_own on public.llm_usage_log';
-  execute 'create policy llm_usage_log_own on public.llm_usage_log for select using (user_id = auth.uid())';
+  execute 'create policy llm_usage_log_own on public.llm_usage_log for select to authenticated
+    using ((select auth.uid()) = user_id)';
 
   execute 'drop policy if exists budget_counters_own on public.budget_counters';
-  execute 'create policy budget_counters_own on public.budget_counters for select using (user_id = auth.uid())';
+  execute 'create policy budget_counters_own on public.budget_counters for select to authenticated
+    using ((select auth.uid()) = user_id)';
 end;
 $$;
 
@@ -52,8 +59,8 @@ begin
   end if;
 
   execute 'drop policy if exists resumes_own on storage.objects';
-  execute 'create policy resumes_own on storage.objects for all
-    using (bucket_id = ''resumes'' and (storage.foldername(name))[1] = auth.uid()::text)
-    with check (bucket_id = ''resumes'' and (storage.foldername(name))[1] = auth.uid()::text)';
+  execute 'create policy resumes_own on storage.objects for all to authenticated
+    using (bucket_id = ''resumes'' and (storage.foldername(name))[1] = (select auth.uid())::text)
+    with check (bucket_id = ''resumes'' and (storage.foldername(name))[1] = (select auth.uid())::text)';
 end;
 $$;

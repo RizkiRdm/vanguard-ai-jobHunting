@@ -1,18 +1,18 @@
-import postgres, { type JSONValue } from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import { getEnv } from '../config/env.ts';
+import * as schema from '../db/schema.ts';
 
 export type Sql = ReturnType<typeof postgres>;
-
-/** Narrows an already-validated object for a JSONB parameter. */
-export function toJson(value: unknown): JSONValue {
-  return value as JSONValue;
-}
+export type Db = ReturnType<typeof drizzle<typeof schema>>;
 
 let client: Sql | undefined;
+let database: Db | undefined;
 
 /**
- * Shared Postgres pool. `onnotice` is muted so Postgres notices never reach logs.
- * SQL text itself is never logged (the Python app echoed every statement).
+ * Shared Postgres pool. `prepare: false` because the app connects through the
+ * transaction-mode pooler, which does not support prepared statements.
+ * `onnotice` is muted so Postgres notices never reach logs; SQL text is never logged.
  */
 export function getDb(): Sql {
   if (!client) {
@@ -20,15 +20,24 @@ export function getDb(): Sql {
       max: 10,
       idle_timeout: 30,
       connect_timeout: 10,
+      prepare: false,
       onnotice: () => {},
     });
   }
   return client;
 }
 
+export function getDrizzle(): Db {
+  if (!database) {
+    database = drizzle(getDb(), { schema });
+  }
+  return database;
+}
+
 export async function closeDb(): Promise<void> {
   if (client) {
     await client.end({ timeout: 5 });
     client = undefined;
+    database = undefined;
   }
 }

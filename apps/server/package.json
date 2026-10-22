@@ -14,8 +14,10 @@
   "dependencies": {
     "@google/genai": "latest",
     "@hono/node-server": "latest",
+    "@supabase/server": "^1.9.2",
     "@supabase/supabase-js": "latest",
     "@vanguard/contracts": "*",
+    "drizzle-orm": "^0.45.4",
     "hono": "latest",
     "playwright": "latest",
     "postgres": "latest",
@@ -23,6 +25,7 @@
   },
   "devDependencies": {
     "@types/node": "latest",
+    "drizzle-kit": "^0.31.11",
     "tsx": "latest",
     "typescript": "latest",
     "vitest": "latest"

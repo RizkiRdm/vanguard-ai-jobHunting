@@ -1,7 +1,9 @@
 import { GoogleGenAI } from '@google/genai';
+import { sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import { getEnv } from '../../config/env.ts';
-import { getDb } from '../../lib/db.ts';
+import { llmUsageLog } from '../../db/schema.ts';
+import { getDrizzle } from '../../lib/db.ts';
 import { logger } from '../../lib/logger.ts';
 import { AppError } from '../../lib/errors.ts';
 
@@ -38,16 +40,12 @@ export async function generateJson<T extends z.ZodTypeAny>(
   options: GenerateOptions<T>,
 ): Promise<z.infer<T>> {
   const env = getEnv();
-  const sql = getDb();
+  const db = getDrizzle();
 
-  const reserved = await sql<{ reserve_llm_tokens: boolean }[]>`
-    select public.reserve_llm_tokens(
-      ${options.userId},
-      ${RESERVATION_TOKENS},
-      ${env.DAILY_TOKEN_BUDGET}
-    ) as reserve_llm_tokens
-  `;
-  if (reserved[0]?.reserve_llm_tokens !== true) {
+  const reserved = (await db.execute(
+    sql`select public.reserve_llm_tokens(${options.userId}, ${RESERVATION_TOKENS}, ${env.DAILY_TOKEN_BUDGET}) as reserved`,
+  )) as unknown as Array<{ reserved: boolean }>;
+  if (reserved[0]?.reserved !== true) {
     throw new AppError(429, 'budget_exceeded', 'Daily AI token budget exceeded.');
   }
 
@@ -92,10 +90,15 @@ export async function generateJson<T extends z.ZodTypeAny>(
     });
     throw new AppError(502, 'ai_unavailable', 'AI provider is unavailable.');
   } finally {
-    await sql`select public.settle_llm_tokens(${options.userId}, ${RESERVATION_TOKENS}, ${totalTokens})`;
-    await sql`
-      insert into public.llm_usage_log (user_id, model, prompt_tokens, completion_tokens, total_tokens)
-      values (${options.userId}, ${env.AI_MODEL}, ${promptTokens}, ${completionTokens}, ${totalTokens})
-    `;
+    await db.execute(
+      sql`select public.settle_llm_tokens(${options.userId}, ${RESERVATION_TOKENS}, ${totalTokens})`,
+    );
+    await db.insert(llmUsageLog).values({
+      user_id: options.userId,
+      model: env.AI_MODEL,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      total_tokens: totalTokens,
+    });
   }
 }

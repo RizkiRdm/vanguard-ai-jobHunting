@@ -4,8 +4,9 @@ import { parseEnv } from './env.ts';
 const REQUIRED = {
   DATABASE_URL: 'postgres://u:p@localhost:5432/db',
   SUPABASE_URL: 'https://example.supabase.co',
-  SUPABASE_ANON_KEY: 'anon',
-  SUPABASE_SERVICE_ROLE_KEY: 'service',
+  SUPABASE_PUBLISHABLE_KEY: 'anon',
+  SUPABASE_SECRET_KEY: 'service',
+  SUPABASE_JWKS_URL: 'https://example.supabase.co/auth/v1/.well-known/jwks.json',
   GEMINI_API_KEY: 'key',
 };
 
@@ -20,7 +21,7 @@ describe('parseEnv', () => {
 
   it('fails fast when required values are missing', () => {
     expect(() => parseEnv({})).toThrow(/DATABASE_URL/);
-    expect(() => parseEnv({})).toThrow(/SUPABASE_SERVICE_ROLE_KEY/);
+    expect(() => parseEnv({})).toThrow(/SUPABASE_SECRET_KEY/);
   });
 
   it('rejects malformed values instead of falling back', () => {

@@ -1,6 +1,7 @@
 import type { Task } from '@vanguard/contracts';
+import { sql } from 'drizzle-orm';
 import { getEnv } from '../../config/env.ts';
-import { getDb, toJson } from '../../lib/db.ts';
+import { getDrizzle } from '../../lib/db.ts';
 import { logger } from '../../lib/logger.ts';
 import { getAdminClient } from '../../lib/supabase.ts';
 import { openSession } from '../../infrastructure/browser/session.ts';
@@ -18,23 +19,21 @@ async function requestApproval(
   reason: string,
   details: Record<string, unknown>,
 ): Promise<void> {
-  const sql = getDb();
-  await sql`
-    select public.request_approval(
+  await getDrizzle().execute(
+    sql`select public.request_approval(
       ${task.id},
       ${workerId},
       ${reason},
-      ${sql.json(toJson(details))}
-    )
-  `;
+      ${JSON.stringify(details)}::jsonb
+    )`,
+  );
 }
 
 async function retryOrFail(task: Task, workerId: string, error: string): Promise<void> {
-  const sql = getDb();
   const backoff = Math.min(60, 5 * task.attempts);
-  await sql`
-    select public.retry_task(${task.id}, ${workerId}, ${error}, ${backoff})
-  `;
+  await getDrizzle().execute(
+    sql`select public.retry_task(${task.id}, ${workerId}, ${error}, ${backoff})`,
+  );
 }
 
 async function downloadResume(

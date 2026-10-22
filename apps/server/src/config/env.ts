@@ -9,8 +9,10 @@ const EnvSchema = z.object({
 
   // Supabase Auth + Storage
   SUPABASE_URL: z.string().url('SUPABASE_URL must be a URL'),
-  SUPABASE_ANON_KEY: z.string().min(1, 'SUPABASE_ANON_KEY is required'),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
+  SUPABASE_PUBLISHABLE_KEY: z.string().min(1, 'SUPABASE_PUBLISHABLE_KEY is required'),
+  SUPABASE_SECRET_KEY: z.string().min(1, 'SUPABASE_SECRET_KEY is required'),
+  // Public JWKS used to verify access tokens locally instead of calling Auth per request.
+  SUPABASE_JWKS_URL: z.string().url('SUPABASE_JWKS_URL must be a URL'),
 
   // AI provider
   GEMINI_API_KEY: z.string().min(1, 'GEMINI_API_KEY is required'),
@@ -55,6 +57,12 @@ export function parseEnv(source: NodeJS.ProcessEnv = process.env): Env {
 }
 
 export function getEnv(): Env {
+  // Node >= 20.12 loads .env from the working directory; a missing file is fine.
+  try {
+    process.loadEnvFile();
+  } catch {
+    // No .env file: rely on the real environment.
+  }
   cached ??= parseEnv();
   return cached;
 }

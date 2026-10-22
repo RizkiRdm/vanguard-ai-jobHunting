@@ -25,8 +25,9 @@ HTTP route (Hono)  →  auth + Zod validation  →  service  →  repository  �
 
 - `src/modules/*/routes.ts` — HTTP concerns only.
 - `src/modules/*/service.ts` — business rules; testable without Hono.
-- `src/modules/*/repository.ts` — tagged-template SQL (`postgres.js`), never raw
-  queries in routes.
+- `src/modules/*/repository.ts` — Drizzle queries over `postgres.js`; SQL functions
+  are called with `sql` templates. No queries in routes.
+- `src/db/schema.ts` — typed mirror of the SQL migrations, for query typing only.
 - `src/infrastructure/` — Playwright sessions, Gemini calls, prompts.
 - `packages/contracts` — Zod schemas and inferred types shared by web and server.
 
@@ -39,8 +40,31 @@ a discovery task. `llm_usage_log` and `budget_counters` account for token spend.
 `rate_limits` backs fixed-window limits.
 
 Every user-owned table has RLS policies for `auth.uid()`, but the API also uses the
-service-role key, so repository queries filter on `user_id` explicitly. RLS is a
+secret key, so repository queries filter on `user_id` explicitly. RLS is a
 backstop, not the authorization.
+
+## Supabase project
+
+Postgres, Auth and Storage are Supabase-managed; the API and worker connect to
+Postgres with `DATABASE_URL` and use the secret key only for Storage and
+token verification. The browser uses the publishable key for sign-in and gets resume
+access through short-lived signed URLs.
+
+Migrations are plain SQL files in `supabase/migrations`, applied in filename order
+and recorded in `public.schema_migrations`. Supabase also keeps its own migration
+history when changes are applied through the MCP server or the CLI, so pick one
+path per environment and keep the two records identical.
+
+RLS and grants are part of the security model:
+
+- Policies are declared `to authenticated` with both `using` and `with check`, so a
+  user cannot read another user's rows or reassign ownership.
+- `(select auth.uid())` is used so the check is evaluated once per statement.
+- Supabase grants EXECUTE on new public functions to `anon` and `authenticated` by
+  default. The queue, budget and rate-limit functions are revoked from those roles
+  and granted to `service_role` only; their `search_path` is pinned.
+- The `resumes` bucket is private, PDF-only, 10 MB, with a policy keyed on the
+  first folder segment matching `auth.uid()`.
 
 ## Task lifecycle
 
@@ -99,3 +123,8 @@ and appends to `llm_usage_log`. Over-budget calls fail with 429.
   single-user tool, revisit for multi-tenant use.
 - Screenshots are transient worker artifacts and are not stored or served.
 - Resume parsing is not automated; the profile is filled in manually.
+- The schema, RLS policies, grants and the private `resumes` bucket are applied to
+  one hosted Supabase project. Task, browser and AI behaviour was exercised only
+  against a local Postgres, so no hosted end-to-end run is verified.
+- Discovery depends on DuckDuckGo's HTML results; it is a scrape and can break
+  without notice.
