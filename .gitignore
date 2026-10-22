@@ -1,0 +1,35 @@
+# Node
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# Env
+.env
+.env.*
+!.env.example
+.browser-state/
+apps/web/.svelte-kit/
+
+# Playwright / browser artifacts
+storage/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# Python legacy (removed runtime)
+__pycache__/
+*.py[oc]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info
+
+# Misc
+.DS_Store
+coverage/
+.code-review-graph/
+.playwright-cli/
+.geminiignore
+create_issue.sh

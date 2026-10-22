@@ -1,0 +1,41 @@
+{
+  "name": "vanguard",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Vanguard AI job hunting system - TypeScript rewrite",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:server": "npm run dev --workspace @vanguard/server",
+    "dev:web": "npm run dev --workspace @vanguard/web",
+    "worker": "npm run worker --workspace @vanguard/server",
+    "build": "npm run build --workspace @vanguard/web",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p apps/server && npm run check --workspace @vanguard/web",
+    "db:migrate": "tsx apps/server/src/scripts/migrate.ts",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "latest",
+    "@types/node": "latest",
+    "eslint": "latest",
+    "prettier": "latest",
+    "typescript": "latest",
+    "typescript-eslint": "latest",
+    "vitest": "latest"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "protobufjs@7.6.6": true
+  }
+}

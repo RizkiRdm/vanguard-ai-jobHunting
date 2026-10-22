@@ -1,7 +1,6 @@
 # Vanguard
 
-Stack: FastAPI + SQLAlchemy 2.0 async + PostgreSQL + Gemini SDK
+Stack: SvelteKit + Hono on Node.js + Playwright + Supabase (Postgres, Auth, Storage)
 Rules: See AGENTS.md
-Architecture: See docs/BLUEPRINT.md
-ORM: SQLAlchemy ONLY. Zero Tortoise ORM.
-Known bugs: See docs/BLUEPRINT.md Section 13.
+Architecture: See docs/ARCHITECTURE.md
+Audit of the previous Python implementation: See docs/AUDIT.md

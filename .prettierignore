@@ -1,0 +1,6 @@
+node_modules
+apps/web/.svelte-kit
+apps/web/build
+coverage
+package-lock.json
+.gemini/

@@ -1,28 +1,20 @@
+# The database, auth and storage are hosted by Supabase, so only the two Node
+# processes run here. Provide the same .env to both.
 services:
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: vanguard
-      POSTGRES_PASSWORD: password
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
   api:
     build: .
+    env_file: .env
     ports:
-      - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/vanguard
-    depends_on:
-      db:
-        condition: service_healthy
+      - '8000:8000'
+    command: ['npx', 'tsx', 'apps/server/src/api.ts']
+
   worker:
     build: .
-    command: python core/worker.py
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/vanguard
-    depends_on:
-      db:
-        condition: service_healthy
+    env_file: .env
+    # Browser contexts keep per-user state here; mount a volume in production.
+    volumes:
+      - browser-state:/app/.browser-state
+    command: ['npx', 'tsx', 'apps/server/src/worker.ts']
+
+volumes:
+  browser-state:
