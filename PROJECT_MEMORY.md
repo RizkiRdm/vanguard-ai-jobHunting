@@ -88,7 +88,7 @@ docs/
 - ✅ Task queue: atomic claim (`SKIP LOCKED`), leases, heartbeat, reclaim, retry, approval gate
 - ✅ Browser automation: per-user contexts, `.browser-state/` (0700/0600), no CDP exposure
 - ✅ AI: `generateJson` with Zod validation, token reservation + settlement, budget 429
-- ✅ AI gateway migrated: `@google/genai` → Vercel AI SDK (`ai` + `@ai-sdk/google`), `generateJson` signature unchanged
+- ✅ CI workflow updated: Postgres service container + local-stub.sql for integration tests (TEST_DATABASE_URL set)
 - ✅ SvelteKit web: login, profile, resume upload, task list/detail, discovery/apply forms, polling
 - ✅ Shared contracts (`packages/contracts`)
 - ✅ All gates green: typecheck, lint, format, 10 unit tests (4 DB tests skipped without `TEST_DATABASE_URL`)
