@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@google/genai": "latest",
+    "ai": "latest",
+    "@ai-sdk/google": "latest",
     "@hono/node-server": "latest",
     "@supabase/server": "^1.9.2",
     "@supabase/supabase-js": "latest",

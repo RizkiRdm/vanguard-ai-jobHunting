@@ -5,11 +5,10 @@ on: [push, pull_request]
 env:
   DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
   SUPABASE_URL: https://example.supabase.co
-  SUPABASE_ANON_KEY: test-anon-key
-  SUPABASE_SERVICE_ROLE_KEY: test-service-key
+  SUPABASE_PUBLISHABLE_KEY: test-publishable-key
+  SUPABASE_SECRET_KEY: test-secret-key
+  SUPABASE_JWKS_URL: https://example.supabase.co/auth/v1/.well-known/jwks.json
   GEMINI_API_KEY: test-gemini-key
-  PUBLIC_SUPABASE_URL: https://example.supabase.co
-  PUBLIC_SUPABASE_ANON_KEY: test-anon-key
   API_BASE_URL: http://127.0.0.1:8000
 
 jobs:

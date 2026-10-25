@@ -1,6 +1,6 @@
 # Vanguard AI Job Hunting — Project Memory
 
-**Last updated:** 2026-10-25 | **Commit:** `d329c31` (main) | **Branch:** main
+**Last updated:** 2026-10-25 | **Commit:** `feat/preflight-79-ai-migration` (branch) | **Branch:** feat/preflight-79-ai-migration
 
 ---
 
@@ -24,7 +24,7 @@ Vanguard is an AI job hunting assistant that discovers real job listings, prepar
 | Storage | Supabase Storage (private `resumes` bucket, 10 MB, PDF only) |
 | Query Layer | Drizzle ORM over `postgres.js` (SQL remains authoritative) |
 | Migrations | Plain SQL in `supabase/migrations/` applied via `npm run db:migrate` |
-| AI | Gemini (`@google/genai`) with JSON validation + token budget |
+| AI | Gemini via Vercel AI SDK (`@ai-sdk/google`) with JSON validation + token budget |
 | Contracts | Zod in `packages/contracts` (shared server/web) |
 | Testing | Vitest (unit), integration tests need `TEST_DATABASE_URL` |
 
@@ -88,6 +88,7 @@ docs/
 - ✅ Task queue: atomic claim (`SKIP LOCKED`), leases, heartbeat, reclaim, retry, approval gate
 - ✅ Browser automation: per-user contexts, `.browser-state/` (0700/0600), no CDP exposure
 - ✅ AI: `generateJson` with Zod validation, token reservation + settlement, budget 429
+- ✅ AI gateway migrated: `@google/genai` → Vercel AI SDK (`ai` + `@ai-sdk/google`), `generateJson` signature unchanged
 - ✅ SvelteKit web: login, profile, resume upload, task list/detail, discovery/apply forms, polling
 - ✅ Shared contracts (`packages/contracts`)
 - ✅ All gates green: typecheck, lint, format, 10 unit tests (4 DB tests skipped without `TEST_DATABASE_URL`)

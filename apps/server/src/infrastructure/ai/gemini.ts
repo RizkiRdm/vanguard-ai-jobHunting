@@ -1,4 +1,5 @@
-import { GoogleGenAI } from '@google/genai';
+import { generateText, Output } from 'ai';
+import { google } from '@ai-sdk/google';
 import { sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import { getEnv } from '../../config/env.ts';
@@ -9,15 +10,6 @@ import { AppError } from '../../lib/errors.ts';
 
 /** Tokens reserved before a call so concurrent requests cannot overspend the cap. */
 const RESERVATION_TOKENS = 4_000;
-
-let client: GoogleGenAI | undefined;
-
-function getClient(): GoogleGenAI {
-  if (!client) {
-    client = new GoogleGenAI({ apiKey: getEnv().GEMINI_API_KEY });
-  }
-  return client;
-}
 
 export interface GenerateOptions<T extends z.ZodTypeAny> {
   prompt: string;
@@ -49,9 +41,11 @@ export async function generateJson<T extends z.ZodTypeAny>(
     throw new AppError(429, 'budget_exceeded', 'Daily AI token budget exceeded.');
   }
 
-  const parts: Array<Record<string, unknown>> = [{ text: options.prompt }];
+  const content: Array<
+    { type: 'text'; text: string } | { type: 'file'; mediaType: string; data: string }
+  > = [{ type: 'text', text: options.prompt }];
   if (options.imageBase64) {
-    parts.push({ inlineData: { mimeType: 'image/png', data: options.imageBase64 } });
+    content.push({ type: 'file', mediaType: 'image/png', data: options.imageBase64 });
   }
 
   let promptTokens = 0;
@@ -59,27 +53,25 @@ export async function generateJson<T extends z.ZodTypeAny>(
   let totalTokens = 0;
 
   try {
-    const response = await getClient().models.generateContent({
-      model: env.AI_MODEL,
-      contents: [{ role: 'user', parts }],
-      config: {
-        responseMimeType: 'application/json',
-        ...(options.system ? { systemInstruction: options.system } : {}),
-      },
+    const result = await generateText({
+      model: google(env.AI_MODEL),
+      messages: [{ role: 'user', content }],
+      ...(options.system ? { system: options.system } : {}),
+      output: Output.object({ schema: options.schema }),
     });
 
-    const usage = response.usageMetadata;
-    promptTokens = usage?.promptTokenCount ?? 0;
-    completionTokens = usage?.candidatesTokenCount ?? 0;
-    totalTokens = usage?.totalTokenCount ?? promptTokens + completionTokens;
+    const usage = result.usage;
+    promptTokens = usage?.inputTokens ?? 0;
+    completionTokens = usage?.outputTokens ?? 0;
+    totalTokens = usage?.totalTokens ?? promptTokens + completionTokens;
 
-    const text = response.text;
-    if (!text) throw new AppError(502, 'ai_empty_response', 'AI returned an empty response.');
-
-    const parsed = options.schema.safeParse(JSON.parse(text));
+    const parsed = options.schema.safeParse(result.output);
     if (!parsed.success) {
       logger.error('ai_invalid_response', { userId: options.userId, issues: parsed.error.issues });
       throw new AppError(502, 'ai_invalid_response', 'AI returned an unexpected format.');
+    }
+    if (totalTokens === 0 && !result.output) {
+      throw new AppError(502, 'ai_empty_response', 'AI returned an empty response.');
     }
     return parsed.data;
   } catch (error) {
