@@ -158,7 +158,7 @@ never served.
 
 `@vanguard/server`: `hono`, `@hono/node-server`, `@supabase/supabase-js`,
 `@supabase/server` (JWKS token verification), `postgres`, `drizzle-orm`,
-`playwright`, `@google/genai`, `zod`, `@vanguard/contracts`.
+`playwright`, `ai`, `@ai-sdk/google`, `zod`, `@vanguard/contracts`.
 
 `@vanguard/web`: `@sveltejs/kit`, `svelte`, `@supabase/ssr`,
 `@supabase/supabase-js`, `zod`, `@vanguard/contracts`.
