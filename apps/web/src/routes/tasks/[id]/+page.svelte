@@ -64,8 +64,8 @@
       </form>
     {:else}
       <p class="muted">
-        Vanguard filled the form and stopped. Check the details, then approve the submission. Nothing
-        is sent until you approve.
+        Vanguard filled the form and stopped. Check the details, then approve the submission.
+        Nothing is sent until you approve.
       </p>
       <form method="POST" action="?/approve">
         <div class="field">
@@ -86,7 +86,11 @@
 
 <section class="card">
   <h2>Details</h2>
-  <pre class="details">{JSON.stringify({ payload: task.payload, result: task.result }, null, 2)}</pre>
+  <pre class="details">{JSON.stringify(
+      { payload: task.payload, result: task.result },
+      null,
+      2,
+    )}</pre>
 </section>
 
 {#if data.jobs.length > 0}

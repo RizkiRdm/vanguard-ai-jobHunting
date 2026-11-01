@@ -35,7 +35,12 @@
       </div>
       <div class="field">
         <label for="target_role">Target role</label>
-        <input id="target_role" name="target_role" maxlength="255" value={profile?.target_role ?? ''} />
+        <input
+          id="target_role"
+          name="target_role"
+          maxlength="255"
+          value={profile?.target_role ?? ''}
+        />
       </div>
       <div class="field">
         <label for="location">Location</label>
@@ -43,7 +48,12 @@
       </div>
       <div class="field">
         <label for="expected_salary">Expected salary</label>
-        <input id="expected_salary" name="expected_salary" maxlength="100" value={profile?.expected_salary ?? ''} />
+        <input
+          id="expected_salary"
+          name="expected_salary"
+          maxlength="100"
+          value={profile?.expected_salary ?? ''}
+        />
       </div>
       <div class="field">
         <label for="experience_years">Years of experience</label>
@@ -72,7 +82,9 @@
 
   <section class="card">
     <h2>Resume</h2>
-    <p class="muted">PDF only, up to 10 MB. Stored in a private bucket with a random object name.</p>
+    <p class="muted">
+      PDF only, up to 10 MB. Stored in a private bucket with a random object name.
+    </p>
 
     {#if profile?.resume_filename}
       <p>
@@ -97,7 +109,8 @@
         <input id="file" name="file" type="file" accept="application/pdf" required />
       </div>
       <div class="actions">
-        <button type="submit" disabled={uploading}>{uploading ? 'Uploading…' : 'Upload PDF'}</button>
+        <button type="submit" disabled={uploading}>{uploading ? 'Uploading…' : 'Upload PDF'}</button
+        >
       </div>
     </form>
   </section>

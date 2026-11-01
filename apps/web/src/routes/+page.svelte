@@ -54,7 +54,14 @@
       <form method="POST" action="?/discover">
         <div class="field">
           <label for="query">Search query</label>
-          <input id="query" name="query" required minlength="2" maxlength="200" placeholder="backend engineer remote" />
+          <input
+            id="query"
+            name="query"
+            required
+            minlength="2"
+            maxlength="200"
+            placeholder="backend engineer remote"
+          />
         </div>
         <div class="field">
           <label for="limit">Max results</label>

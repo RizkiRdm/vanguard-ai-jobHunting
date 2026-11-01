@@ -4,3 +4,10 @@ apps/web/build
 coverage
 package-lock.json
 .gemini/
+*.sql
+.codegraph/
+graphify-out/
+.opencode/
+goals/
+vanguard-ui-system.html
+VANGUARD_UI_IMPLEMENTATION_PROMPT.md

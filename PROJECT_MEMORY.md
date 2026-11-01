@@ -14,19 +14,19 @@ Vanguard is an AI job hunting assistant that discovers real job listings, prepar
 
 ## Stack (Locked)
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | SvelteKit 3 + Svelte 5 + TypeScript |
-| API | Hono on Node.js 22+ |
-| Browser | Playwright (Chromium) |
-| Database | Supabase PostgreSQL (Postgres 16) |
-| Auth | Supabase Auth (JWT verification via `@supabase/server` + JWKS) |
-| Storage | Supabase Storage (private `resumes` bucket, 10 MB, PDF only) |
-| Query Layer | Drizzle ORM over `postgres.js` (SQL remains authoritative) |
-| Migrations | Plain SQL in `supabase/migrations/` applied via `npm run db:migrate` |
-| AI | Gemini (`@google/genai`) with JSON validation + token budget |
-| Contracts | Zod in `packages/contracts` (shared server/web) |
-| Testing | Vitest (unit), integration tests need `TEST_DATABASE_URL` |
+| Layer       | Technology                                                           |
+| ----------- | -------------------------------------------------------------------- |
+| Frontend    | SvelteKit 3 + Svelte 5 + TypeScript                                  |
+| API         | Hono on Node.js 22+                                                  |
+| Browser     | Playwright (Chromium)                                                |
+| Database    | Supabase PostgreSQL (Postgres 16)                                    |
+| Auth        | Supabase Auth (JWT verification via `@supabase/server` + JWKS)       |
+| Storage     | Supabase Storage (private `resumes` bucket, 10 MB, PDF only)         |
+| Query Layer | Drizzle ORM over `postgres.js` (SQL remains authoritative)           |
+| Migrations  | Plain SQL in `supabase/migrations/` applied via `npm run db:migrate` |
+| AI          | Gemini (`@google/genai`) with JSON validation + token budget         |
+| Contracts   | Zod in `packages/contracts` (shared server/web)                      |
+| Testing     | Vitest (unit), integration tests need `TEST_DATABASE_URL`            |
 
 ---
 
@@ -98,19 +98,19 @@ docs/
 
 ## Critical Blockers / Unverified
 
-| Area | Blocker | Resolution Needed |
-|------|---------|-------------------|
-| **Credentials** | Real `SUPABASE_SECRET_KEY`, DB password, publishable key were in `.env.example` locally (never committed, now placeholders) | Rotate `SUPABASE_SECRET_KEY` in dashboard |
-| **Wrong project residue** | Empty `resumes` bucket on `orjicvxvqrvrazazclha` (cannot delete via SQL, `storage.protect_delete`) | Delete in that project's dashboard → Storage |
-| **Auth E2E** | Only 401 path verified; no real signed-in user token tested | Sign up/in via `/login`, call `/tasks` with real token |
-| **Cross-account isolation** | Not tested at runtime | Second account cannot read first's task/resume (expect 404) |
-| **DB integration tests** | 4 tests skipped (need `TEST_DATABASE_URL`) | Run against real DB or decide CI strategy |
-| **Discover task** | Never run against live DuckDuckGo + Gemini | One end-to-end: queued → running → succeeded |
-| **Apply task** | Never run to approval gate | One end-to-end: stops at `waiting_for_user`, approve re-queues with `submit_selector` |
-| **Token budget** | 429 path not tested live | Exceed `DAILY_TOKEN_BUDGET`, confirm 429 + `llm_usage_log` entry |
-| **Playwright** | Chromium launch + `.browser-state/` perms not verified on target | `npx playwright install --with-deps chromium` |
-| **CI** | Never ran on GitHub Actions | Push, confirm typecheck/lint/format/test/build pass |
-| **Deployment** | No host chosen for long-lived Node + Chromium | Decide before any deploy work |
+| Area                        | Blocker                                                                                                                     | Resolution Needed                                                                     |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **Credentials**             | Real `SUPABASE_SECRET_KEY`, DB password, publishable key were in `.env.example` locally (never committed, now placeholders) | Rotate `SUPABASE_SECRET_KEY` in dashboard                                             |
+| **Wrong project residue**   | Empty `resumes` bucket on `orjicvxvqrvrazazclha` (cannot delete via SQL, `storage.protect_delete`)                          | Delete in that project's dashboard → Storage                                          |
+| **Auth E2E**                | Only 401 path verified; no real signed-in user token tested                                                                 | Sign up/in via `/login`, call `/tasks` with real token                                |
+| **Cross-account isolation** | Not tested at runtime                                                                                                       | Second account cannot read first's task/resume (expect 404)                           |
+| **DB integration tests**    | 4 tests skipped (need `TEST_DATABASE_URL`)                                                                                  | Run against real DB or decide CI strategy                                             |
+| **Discover task**           | Never run against live DuckDuckGo + Gemini                                                                                  | One end-to-end: queued → running → succeeded                                          |
+| **Apply task**              | Never run to approval gate                                                                                                  | One end-to-end: stops at `waiting_for_user`, approve re-queues with `submit_selector` |
+| **Token budget**            | 429 path not tested live                                                                                                    | Exceed `DAILY_TOKEN_BUDGET`, confirm 429 + `llm_usage_log` entry                      |
+| **Playwright**              | Chromium launch + `.browser-state/` perms not verified on target                                                            | `npx playwright install --with-deps chromium`                                         |
+| **CI**                      | Never ran on GitHub Actions                                                                                                 | Push, confirm typecheck/lint/format/test/build pass                                   |
+| **Deployment**              | No host chosen for long-lived Node + Chromium                                                                               | Decide before any deploy work                                                         |
 
 ---
 
@@ -149,6 +149,7 @@ npm run format:check
 ## Environment Variables (Required)
 
 **Server (`.env`):**
+
 - `DATABASE_URL` — Pooler URL (port 6543, `prepare:false`)
 - `SUPABASE_URL` — `https://<ref>.supabase.co`
 - `SUPABASE_PUBLISHABLE_KEY` — `sb_publishable_...` (client-side, RLS-bound)
@@ -157,6 +158,7 @@ npm run format:check
 - `GEMINI_API_KEY` — Gemini API key
 
 **Web (validated at build/start by `apps/web/src/env.ts`):**
+
 - `SUPABASE_URL` (same)
 - `SUPABASE_PUBLISHABLE_KEY` (same)
 - `API_BASE_URL` — `http://localhost:8000` (dev)
