@@ -159,9 +159,9 @@ These have all cost time before. Check them first when something behaves oddly.
 
 ## 9. Workflow for agents
 
-1. Open `docs/FEATURES.md` for the feature map, then read this file and the module you
-   are about to change. Do not start from memory of the Python version; it is gone
-   (see `docs/AUDIT.md`).
+1. Open `docs/FEATURES.md` for the feature map, then read this file, `docs/DESIGN.md`
+   for UI tokens/patterns, and the module you are about to change. Do not start
+   from memory of the Python version; it is gone (see `docs/AUDIT.md`).
 2. State assumptions. If the request is ambiguous or touches security, ask.
 3. Make the smallest change that fully works, including callers, tests and docs.
 4. Verify with `npm run check` (and `npm run doctor` when the environment is suspect).

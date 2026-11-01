@@ -6,19 +6,22 @@
 </script>
 
 <header class="app-header">
-  <div>
-    <h1>Vanguard</h1>
-    <p class="muted" style="margin:0">Autonomous job discovery and application drafting</p>
+  <div class="header-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark">V</span>
+      <span class="brand-name">Vanguard</span>
+    </a>
+    <span class="brand-note">Autonomous job discovery and application drafting</span>
+    <nav class="app-nav">
+      {#if data.user}
+        <a class="nav-link" href="/">Tasks</a>
+        <a class="nav-link" href="/profile">Profile</a>
+        <form method="POST" action="/logout">
+          <button class="btn btn-secondary btn-small" type="submit">Sign out</button>
+        </form>
+      {/if}
+    </nav>
   </div>
-  <nav>
-    {#if data.user}
-      <a href="/">Tasks</a>
-      <a href="/profile">Profile</a>
-      <form method="POST" action="/logout" style="margin:0">
-        <button class="secondary" type="submit">Sign out</button>
-      </form>
-    {/if}
-  </nav>
 </header>
 
 <main>
@@ -26,5 +29,5 @@
 </main>
 
 {#if page.error}
-  <p class="error">{page.error.message}</p>
+  <p class="error" role="alert">{page.error.message}</p>
 {/if}

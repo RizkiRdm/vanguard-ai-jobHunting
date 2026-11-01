@@ -1,11 +1,16 @@
 import { fail } from '@sveltejs/kit';
-import { ApplyRequest, DiscoverRequest, type Task } from '@vanguard/contracts';
+import { ApplyRequest, DiscoverRequest, type Job, type Task } from '@vanguard/contracts';
 import { callApi, unwrap } from '../lib/server/api';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const tasks = unwrap(await callApi<Task[]>(locals, '/tasks'));
-  return { tasks };
+  const jobsResult = await callApi<Job[]>(locals, '/jobs');
+  return {
+    tasks,
+    jobs: jobsResult.ok ? jobsResult.data : [],
+    jobsError: jobsResult.ok ? null : jobsResult.message,
+  };
 };
 
 export const actions: Actions = {

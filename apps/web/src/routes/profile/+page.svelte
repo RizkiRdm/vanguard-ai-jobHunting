@@ -5,19 +5,19 @@
   let uploading = $state(false);
 </script>
 
-<div class="grid">
-  <section class="card">
+<div class="profile-layout">
+  <section class="panel">
     <h2>Profile</h2>
     <p class="muted">Used to fill application forms. Stored in your own Supabase rows only.</p>
 
     {#if form?.error}
-      <p class="error" role="alert">{form.error}</p>
+      <p class="form-status error" role="alert">{form.error}</p>
     {:else if form?.saved}
-      <p class="notice">Profile saved.</p>
+      <p class="form-status success" role="status">Profile saved.</p>
     {:else if form?.uploaded}
-      <p class="notice">Resume uploaded.</p>
+      <p class="form-status success" role="status">Resume uploaded.</p>
     {:else if form?.deleted}
-      <p class="notice">Resume removed.</p>
+      <p class="form-status success" role="status">Resume removed.</p>
     {/if}
 
     <form method="POST" action="?/save">
@@ -80,7 +80,7 @@
     </form>
   </section>
 
-  <section class="card">
+  <section class="panel">
     <h2>Resume</h2>
     <p class="muted">
       PDF only, up to 10 MB. Stored in a private bucket with a random object name.
@@ -104,7 +104,7 @@
       enctype="multipart/form-data"
       onsubmit={() => (uploading = true)}
     >
-      <div class="field" style="margin-top:12px">
+      <div class="field">
         <label for="file">{profile?.resume_filename ? 'Replace resume' : 'Upload resume'}</label>
         <input id="file" name="file" type="file" accept="application/pdf" required />
       </div>

@@ -49,49 +49,69 @@
   }
 </script>
 
-<div class="card" style="max-width:420px;margin:48px auto">
-  <h2>{mode === 'signin' ? 'Sign in' : 'Create account'}</h2>
-  <p class="muted">Vanguard uses Supabase Auth. Credentials are never stored by this app.</p>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1>{mode === 'signin' ? 'Sign in' : 'Create account'}</h1>
+    <p class="lead">Vanguard uses Supabase Auth. Credentials are never stored by this app.</p>
 
-  <form onsubmit={submit}>
-    <div class="field">
-      <label for="email">Email</label>
-      <input id="email" type="email" required autocomplete="email" bind:value={email} />
-    </div>
-    <div class="field">
-      <label for="password">Password</label>
-      <input
-        id="password"
-        type="password"
-        required
-        minlength="8"
-        autocomplete={mode === 'signin' ? 'current-password' : 'new-password'}
-        bind:value={password}
-      />
-    </div>
-
-    {#if errorMessage}
-      <p class="error" role="alert">{errorMessage}</p>
-    {/if}
-    {#if infoMessage}
-      <p class="notice">{infoMessage}</p>
-    {/if}
-
-    <div class="actions">
-      <button type="submit" disabled={pending}>
-        {pending ? 'Working…' : mode === 'signin' ? 'Sign in' : 'Create account'}
-      </button>
+    <div class="auth-switch" role="tablist">
       <button
         type="button"
-        class="secondary"
+        aria-pressed={mode === 'signin'}
         onclick={() => {
-          mode = mode === 'signin' ? 'signup' : 'signin';
+          mode = 'signin';
           errorMessage = '';
           infoMessage = '';
         }}
       >
-        {mode === 'signin' ? 'Create account' : 'Back to sign in'}
+        Sign in
+      </button>
+      <button
+        type="button"
+        aria-pressed={mode === 'signup'}
+        onclick={() => {
+          mode = 'signup';
+          errorMessage = '';
+          infoMessage = '';
+        }}
+      >
+        Create account
       </button>
     </div>
-  </form>
+
+    <form onsubmit={submit}>
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" required autocomplete="email" bind:value={email} />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          required
+          minlength="8"
+          autocomplete={mode === 'signin' ? 'current-password' : 'new-password'}
+          bind:value={password}
+        />
+      </div>
+
+      {#if errorMessage}
+        <p class="form-status error" role="alert">{errorMessage}</p>
+      {/if}
+      {#if infoMessage}
+        <p class="form-status info">{infoMessage}</p>
+      {/if}
+
+      <div class="btn-row">
+        <button class="btn btn-primary" type="submit" disabled={pending}>
+          {pending ? 'Working…' : mode === 'signin' ? 'Sign in' : 'Create account'}
+        </button>
+      </div>
+    </form>
+
+    <p class="auth-footnote">
+      By signing in you agree to use Vanguard only on sites you are authorized to access.
+    </p>
+  </div>
 </div>
