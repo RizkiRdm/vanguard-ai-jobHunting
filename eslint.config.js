@@ -6,6 +6,10 @@ export default tseslint.config(
     ignores: ['**/dist/**', '**/node_modules/**', '**/.svelte-kit/**', '**/build/**'],
   },
   js.configs.recommended,
+  {
+    files: ['**/*.mjs'],
+    languageOptions: { globals: { console: 'readonly', process: 'readonly' } },
+  },
   ...tseslint.configs.recommended,
   {
     rules: {
