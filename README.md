@@ -63,14 +63,14 @@ Full instructions, including how to get each environment value: [docs/SETUP.md](
 ## Checks
 
 ```bash
-npm run typecheck         # tsc (server) + svelte-check (web)
-npm run lint              # eslint
-npm test                  # vitest
-npm run build             # adapter-node build of the web app
+npm run check             # typecheck + lint + format:check + test + build, same as CI
+npm run doctor            # node, deps, lockfile, env names, Playwright, migrations
 ```
 
-All four pass on the current commit. The database integration tests skip unless
-`TEST_DATABASE_URL` points at a Postgres with `supabase/local-stub.sql` applied.
+`npm run check` is the gate. `npm run doctor` explains a broken local setup without
+printing any secret value. The database integration tests skip unless
+`TEST_DATABASE_URL` points at a Postgres with `supabase/local-stub.sql` applied;
+`doctor` says so rather than letting the skip look like a pass.
 
 ## Layout
 
@@ -102,6 +102,7 @@ docs/                    setup, architecture, reference, audit
 
 - [docs/SETUP.md](docs/SETUP.md) — install, configure, migrate, run, troubleshoot
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how the pieces fit and why
+- [docs/FEATURES.md](docs/FEATURES.md) — where each feature lives, UI to tests
 - [docs/REFERENCE.md](docs/REFERENCE.md) — endpoints, environment variables, SQL functions
 - [docs/AUDIT.md](docs/AUDIT.md) — what the Python version got wrong and how it was fixed
 - [AGENTS.md](AGENTS.md) — rules for coding agents working in this repository

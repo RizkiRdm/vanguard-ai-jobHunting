@@ -114,11 +114,13 @@ then create a discovery task. The worker picks it up within `WORKER_POLL_MS`.
 ## 6. Verify the setup
 
 ```bash
-npm run typecheck
-npm run lint
-npm test
-npm run build
+npm run doctor    # node, deps, lockfile, env names, Playwright, migrations
+npm run check     # typecheck → lint → format:check → test → build
 ```
+
+`doctor` names what is missing without printing any value. `check` is the same gate CI
+runs. The database integration tests skip when `TEST_DATABASE_URL` is unset; `doctor`
+states that explicitly.
 
 Runtime checks:
 
@@ -131,6 +133,9 @@ Create a discovery task from the UI. A task that stays `queued` means the worker
 is not running or cannot reach the database; check its log output first.
 
 ## 7. Common problems
+
+Start with `npm run doctor`; it reports which prerequisite, dependency or env name is
+missing, without printing any secret value.
 
 | Symptom                                | Cause                                                                | Fix                                                                                         |
 | -------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |

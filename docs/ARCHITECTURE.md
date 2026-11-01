@@ -16,6 +16,16 @@ The browser never calls the API directly. SvelteKit server code holds the Supaba
 access token from the HttpOnly cookie and forwards it as a bearer token. No token
 appears in a URL, and client JavaScript never reads the cookie.
 
+## Package boundaries
+
+One npm workspace root, three packages: `apps/web`, `apps/server`, `packages/contracts`.
+They stay separate. Merging web into server would put UI code and browser automation in
+one build and one process group; merging contracts into server would make the web build
+depend on the API's runtime dependencies. The only thing they genuinely share is
+`@vanguard/contracts` (Zod schemas, no runtime side effects), and that is already its own
+package. Consolidating the scripts instead — `npm run check`, `npm run doctor` — gets the
+same discoverability without moving a boundary.
+
 ## Layers
 
 ```text

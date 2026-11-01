@@ -5,20 +5,22 @@ fix the file.
 
 ## npm scripts
 
-| Script                 | Runs                                                    | Notes                                                            |
-| ---------------------- | ------------------------------------------------------- | ---------------------------------------------------------------- |
-| `npm run dev`          | every workspace's `dev`                                 | API + web together; no worker                                    |
-| `npm run dev:server`   | `tsx watch src/api.ts` (`@vanguard/server`)             | API on `API_PORT`                                                |
-| `npm run dev:web`      | `vite dev --port 5173` (`@vanguard/web`)                | needs `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `API_BASE_URL` |
-| `npm run worker`       | `tsx src/worker.ts`                                     | long-running; claims tasks                                       |
-| `npm run build`        | `vite build` (`@vanguard/web`)                          | adapter-node output in `apps/web/build`                          |
-| `npm test`             | `vitest run`                                            | DB suite skips without `TEST_DATABASE_URL`                       |
-| `npm run test:watch`   | `vitest`                                                |                                                                  |
-| `npm run typecheck`    | `tsc -p apps/server` + `npm run check -w @vanguard/web` | `svelte-check`                                                   |
-| `npm run lint`         | `eslint .`                                              | flat config, `no-explicit-any` is an error                       |
-| `npm run format`       | `prettier --write .`                                    |                                                                  |
-| `npm run format:check` | `prettier --check .`                                    |                                                                  |
-| `npm run db:migrate`   | `tsx apps/server/src/scripts/migrate.ts`                | applies `supabase/migrations/*.sql`, records each name           |
+| Script                 | Runs                                                    | Notes                                                                                 |
+| ---------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `npm run dev`          | every workspace's `dev`                                 | API + web together; no worker                                                         |
+| `npm run dev:server`   | `tsx watch src/api.ts` (`@vanguard/server`)             | API on `API_PORT`                                                                     |
+| `npm run dev:web`      | `vite dev --port 5173` (`@vanguard/web`)                | needs `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `API_BASE_URL`                      |
+| `npm run worker`       | `tsx src/worker.ts`                                     | long-running; claims tasks                                                            |
+| `npm run build`        | `vite build` (`@vanguard/web`)                          | adapter-node output in `apps/web/build`                                               |
+| `npm test`             | `vitest run`                                            | DB suite skips without `TEST_DATABASE_URL`                                            |
+| `npm run test:watch`   | `vitest`                                                |                                                                                       |
+| `npm run typecheck`    | `tsc -p apps/server` + `npm run check -w @vanguard/web` | `svelte-check`                                                                        |
+| `npm run check`        | typecheck → lint → format:check → test → build          | Same sequence as CI; the first failing step stops it                                  |
+| `npm run doctor`       | `node scripts/doctor.mjs`                               | Node, deps, lockfile, env names (no values), Playwright, migrations; exit 1 on errors |
+| `npm run lint`         | `eslint .`                                              | flat config, `no-explicit-any` is an error                                            |
+| `npm run format`       | `prettier --write .`                                    |                                                                                       |
+| `npm run format:check` | `prettier --check .`                                    |                                                                                       |
+| `npm run db:migrate`   | `tsx apps/server/src/scripts/migrate.ts`                | applies `supabase/migrations/*.sql`, records each name                                |
 
 ## Environment variables
 
@@ -65,24 +67,24 @@ Success responses are `{ "status": "success", "data": … }`. Failures are
 `{ "error": { "code": "…", "message": "…" } }` with a matching status code. No
 stack traces.
 
-| Method | Path                     | Auth | Body / query                          | Success                           | Notes                                                            |
-| ------ | ------------------------ | ---- | ------------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
-| GET    | `/health`                | no   | —                                     | 200                               | Static liveness                                                  |
-| GET    | `/ready`                 | no   | —                                     | 200 / 503                         | Runs `select 1`; 503 `not_ready` when the database is down       |
-| GET    | `/jobs`                  | yes  | —                                     | 200                               | All jobs for the caller, newest first                            |
-| GET    | `/profile/me`            | yes  | —                                     | 200 / 404                         | 404 until the profile exists                                     |
-| PUT    | `/profile/me`            | yes  | `ProfileUpdate` (all fields optional) | 200                               | Upsert; a field left out is cleared                              |
-| POST   | `/resumes`               | yes  | `multipart/form-data`, field `file`   | 201 `{path, filename}`            | PDF only, ≤ 10 MB, `%PDF-` checked; replaces the previous object |
-| GET    | `/resumes`               | yes  | —                                     | 200 `{url, filename, expires_in}` | New 60 s signed URL; 404 if none                                 |
-| DELETE | `/resumes`               | yes  | —                                     | 200 `{deleted:true}`              | Removes object and profile pointers                              |
-| GET    | `/tasks`                 | yes  | —                                     | 200 `Task[]`                      | Caller's tasks, newest first                                     |
-| GET    | `/tasks/:taskId`         | yes  | —                                     | 200 `Task` / 404                  | Other users' tasks are 404, not 403                              |
-| POST   | `/tasks/discover`        | yes  | `{query, limit?}`                     | 201 `Task`                        | Rate limited, scope `discover`; 429 `rate_limited`               |
-| POST   | `/tasks/apply`           | yes  | `{source_url, title?, company?}`      | 201 `Task`                        | Rate limited, scope `apply`                                      |
-| POST   | `/tasks/:taskId/answer`  | yes  | `{answer}`                            | 200 `Task`                        | Only while `waiting_for_user`, otherwise 409                     |
-| POST   | `/tasks/:taskId/approve` | yes  | `{note?}` (optional body)             | 200 `Task`                        | Records approval and re-queues; only path that enables submit    |
-| POST   | `/tasks/:taskId/cancel`  | yes  | —                                     | 200 `Task`                        | From any non-final state                                         |
-| GET    | `/tasks/:taskId/jobs`    | yes  | —                                     | 200 `Job[]`                       | Listings created by that task                                    |
+| Method | Path                     | Auth | Body / query                          | Success                           | Contract (`packages/contracts`)                    | Notes                                                            |
+| ------ | ------------------------ | ---- | ------------------------------------- | --------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------- |
+| GET    | `/health`                | no   | —                                     | 200                               | —                                                  | Static liveness                                                  |
+| GET    | `/ready`                 | no   | —                                     | 200 / 503                         | —                                                  | Runs `select 1`; 503 `not_ready` when the database is down       |
+| GET    | `/jobs`                  | yes  | —                                     | 200                               | `Job`                                              | All jobs for the caller, newest first                            |
+| GET    | `/profile/me`            | yes  | —                                     | 200 / 404                         | `Profile`                                          | 404 until the profile exists                                     |
+| PUT    | `/profile/me`            | yes  | `ProfileUpdate` (all fields optional) | 200                               | `ProfileUpdate` → `Profile`                        | Upsert; a field left out is cleared                              |
+| POST   | `/resumes`               | yes  | `multipart/form-data`, field `file`   | 201 `{path, filename}`            | `RESUME_MAX_BYTES`, `RESUME_MIME`, `RESUME_BUCKET` | PDF only, ≤ 10 MB, `%PDF-` checked; replaces the previous object |
+| GET    | `/resumes`               | yes  | —                                     | 200 `{url, filename, expires_in}` | `Profile.resume_path`                              | New 60 s signed URL; 404 if none                                 |
+| DELETE | `/resumes`               | yes  | —                                     | 200 `{deleted:true}`              | —                                                  | Removes object and profile pointers                              |
+| GET    | `/tasks`                 | yes  | —                                     | 200 `Task[]`                      | `Task`, `TaskStatus`                               | Caller's tasks, newest first                                     |
+| GET    | `/tasks/:taskId`         | yes  | —                                     | 200 `Task` / 404                  | `Task`                                             | Other users' tasks are 404, not 403                              |
+| POST   | `/tasks/discover`        | yes  | `{query, limit?}`                     | 201 `Task`                        | `DiscoverRequest` → `Task`                         | Rate limited, scope `discover`; 429 `rate_limited`               |
+| POST   | `/tasks/apply`           | yes  | `{source_url, title?, company?}`      | 201 `Task`                        | `ApplyRequest` → `Task`                            | Rate limited, scope `apply`                                      |
+| POST   | `/tasks/:taskId/answer`  | yes  | `{answer}`                            | 200 `Task`                        | `HitlAnswer` → `Task`                              | Only while `waiting_for_user`, otherwise 409                     |
+| POST   | `/tasks/:taskId/approve` | yes  | `{note?}` (optional body)             | 200 `Task`                        | inline Zod in `modules/tasks/routes.ts`            | Records approval and re-queues; only path that enables submit    |
+| POST   | `/tasks/:taskId/cancel`  | yes  | —                                     | 200 `Task`                        | —                                                  | From any non-final state                                         |
+| GET    | `/tasks/:taskId/jobs`    | yes  | —                                     | 200 `Job[]`                       | `Job`                                              | Listings created by that task                                    |
 
 Validation errors are 400 `validation_error` with the failing paths. Upload limits
 return 413 `payload_too_large`; a wrong file type returns 415

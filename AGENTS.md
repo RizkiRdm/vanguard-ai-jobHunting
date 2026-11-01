@@ -37,6 +37,8 @@ apps/server/
   src/db/schema.ts        typed mirror of the SQL migrations (query types only)
 packages/contracts/       shared Zod schemas and types
 supabase/migrations/      schema, SQL functions, RLS policies (apply in name order)
+scripts/doctor.mjs        local environment diagnostic (`npm run doctor`)
+docs/FEATURES.md          feature map: UI → API → contract → table → tests
 docs/                     architecture, setup, reference, audit
 ```
 
@@ -51,8 +53,8 @@ npm run dev:server        # http://localhost:8000
 npm run worker            # background task worker
 ```
 
-Checks: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
-All four must pass before you call work done.
+Checks: `npm run check` (typecheck → lint → format:check → test → build, same as CI)
+and `npm run doctor` (environment diagnostic). Both must pass before you call work done.
 
 ## 4. Architecture rules
 
@@ -157,13 +159,20 @@ These have all cost time before. Check them first when something behaves oddly.
 
 ## 9. Workflow for agents
 
-1. Read this file and the module you are about to change. Do not start from memory
-   of the Python version; it is gone (see `docs/AUDIT.md`).
+1. Open `docs/FEATURES.md` for the feature map, then read this file and the module you
+   are about to change. Do not start from memory of the Python version; it is gone
+   (see `docs/AUDIT.md`).
 2. State assumptions. If the request is ambiguous or touches security, ask.
 3. Make the smallest change that fully works, including callers, tests and docs.
-4. Verify with the four checks above. A change is not done because it compiles.
+4. Verify with `npm run check` (and `npm run doctor` when the environment is suspect).
+   A change is not done because it compiles.
 5. Report exactly what you ran and what you did not verify. Never claim a deployed,
    live-browser or third-party result you have not observed.
+
+Finding code, in order: `docs/FEATURES.md` row → the files it names → `grep` for the
+symbol. If `.codegraph/` exists, `codegraph explore "<symbols>"` answers most
+"where is this / who calls this" questions in one call. Contracts come from
+`packages/contracts`; changing a shape there changes both apps.
 
 ## 10. Out of scope unless explicitly requested
 
