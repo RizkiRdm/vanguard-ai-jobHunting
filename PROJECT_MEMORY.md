@@ -1,6 +1,6 @@
 # Vanguard AI Job Hunting — Project Memory
 
-**Last updated:** 2026-10-25 | **Commit:** `feat/preflight-79-ai-migration` (branch) | **Branch:** feat/preflight-79-ai-migration
+**Last updated:** 2026-11-01 | **Commit:** `1813e12` (main) | **Branch:** main
 
 ---
 
@@ -93,6 +93,7 @@ docs/
 - ✅ Shared contracts (`packages/contracts`)
 - ✅ All gates green: typecheck, lint, format, 10 unit tests (4 DB tests skipped without `TEST_DATABASE_URL`)
 - ✅ Documentation rewrite (Diátaxis): README, SETUP, ARCHITECTURE, REFERENCE, AUDIT, AGENTS
+- ✅ Mobile-first dark UI system (issue #82): docs/DESIGN.md + tokens in app.css, StatusBadge, +error page, dashboard/profile/login/task detail restyled; npm run check green
 - ✅ Git: `main` at `d329c31`, `feature/ts-hono-migration` pushed, recovery branch/tags local only
 
 ---
@@ -166,8 +167,8 @@ npm run format:check
 
 ## Open GitHub Issue
 
-**#79** — Pre-flight checklist: what MUST be verified before further server/frontend work.
-https://github.com/RizkiRdm/vanguard-ai-jobHunting/issues/79
+**#82** — Define and Implement a Consistent, Mobile-First UI System (implemented; browser/a11y verification deferred).
+https://github.com/RizkiRdm/vanguard-ai-jobHunting/issues/82
 
 ---
 
