@@ -33,3 +33,9 @@ coverage/
 .playwright-cli/
 .geminiignore
 create_issue.sh
+# Supabase local CLI state (never commit local DB, keys, or branches)
+supabase/.branches/
+supabase/.temp/
+supabase/.env*
+supabase/seed.sql.local
+

@@ -18,12 +18,12 @@ appears in a URL, and client JavaScript never reads the cookie.
 
 ## Package boundaries
 
-One npm workspace root, three packages: `apps/web`, `apps/server`, `packages/contracts`.
+One Bun workspace root (Node stays the runtime), three packages: `apps/web`, `apps/server`, `packages/contracts`.
 They stay separate. Merging web into server would put UI code and browser automation in
 one build and one process group; merging contracts into server would make the web build
 depend on the API's runtime dependencies. The only thing they genuinely share is
 `@vanguard/contracts` (Zod schemas, no runtime side effects), and that is already its own
-package. Consolidating the scripts instead — `npm run check`, `npm run doctor` — gets the
+package. Consolidating the scripts instead — `bun run check`, `bun run doctor` — gets the
 same discoverability without moving a boundary.
 
 ## Layers
@@ -61,9 +61,14 @@ token verification. The browser uses the publishable key for sign-in and gets re
 access through short-lived signed URLs.
 
 Migrations are plain SQL files in `supabase/migrations`, applied in filename order
-and recorded in `public.schema_migrations` by `npm run db:migrate`. Supabase also
-keeps its own migration history when changes are applied through the dashboard or
-the CLI, so pick one path per environment and keep the two records identical.
+and recorded in `public.schema_migrations` by `bun run db:migrate`. Supabase CLI
+keeps a separate history (`supabase_migrations.schema_migrations`) when using
+`supabase db reset`/`db push`; mixing paths causes re-application failures. This
+repo's single source of truth is `public.schema_migrations` via `bun run db:migrate`
+for both local and hosted environments (see [SETUP.md](SETUP.md#3-database)).
+Cloud promotion is explicit: test migrations on a clean local DB, review
+RLS/grants/functions/triggers/Storage, then apply the same SQL to hosted through a
+reviewed release step — never copy local data or secrets.
 
 Drizzle is the query layer, not the migration tool. `drizzle-kit` can describe
 tables, but not RLS policies, `WITH CHECK` clauses, triggers, `SECURITY DEFINER`

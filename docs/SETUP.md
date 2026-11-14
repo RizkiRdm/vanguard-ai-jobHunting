@@ -8,7 +8,9 @@ and `supabase/migrations` wins.
 
 - Node.js 22 or newer (`node -v`) — runtime for the API, worker and tooling
 - Bun 1.4.4 or newer (`bun -v`) — package manager and script runner; it does not replace the Node runtime
-- A Supabase project with Auth enabled
+- Supabase CLI (`supabase -v`) for local development: https://supabase.com/docs/guides/cli
+- Docker running (required by the local Supabase stack)
+- A hosted Supabase project for production/remote environments, or local Supabase for development (see §3a)
 - A Gemini API key from Google AI Studio
 - Chromium for Playwright
 
@@ -62,36 +64,84 @@ and abort startup on anything missing or malformed. There are no fallback secret
 ## 3. Database
 
 The schema, SQL functions and RLS policies live in `supabase/migrations` and are
-applied in filename order. A fresh Supabase project needs the steps below; the
-project referenced by `.env` already has them.
-
-```bash
-bun run db:migrate
-```
-
-The runner records applied files in `public.schema_migrations`, so re-running it is
-safe. It is not an Alembic-style downgrade tool; to undo something, write a new
-migration.
+the source of truth. Migrations are applied in filename order and recorded in
+`public.schema_migrations` by `bun run db:migrate` (`apps/server/src/scripts/migrate.ts`).
+Re-running is safe (idempotent by file name). To undo, write a new migration;
+never edit a migration that has been applied.
 
 Queries go through Drizzle (`apps/server/src/db/schema.ts` mirrors these tables for
-typing). The SQL files stay authoritative: RLS, triggers and the queue functions
-cannot be expressed in Drizzle, so do not use `drizzle-kit push`.
+typing). The SQL files stay authoritative: RLS, triggers, grants and queue
+functions cannot be expressed in Drizzle, so do not use `drizzle-kit push`.
 
-If you can reach the project only through the Supabase dashboard, paste each file
-into the SQL editor in filename order. If you do that, `public.schema_migrations`
-is not written, so a later `bun run db:migrate` will try to apply the same DDL
-again and fail. Prefer the pooler URL and the command above.
+### 3a. Local Supabase (recommended for development)
 
-What the migrations create:
+`supabase/config.toml` configures a local stack. Local and cloud use separate
+credentials and data; ordinary local development must not require cloud
+credentials.
 
-- `users` mirrors `auth.users` through the `on_auth_user_created` trigger, and
-  seeds a `budget_counters` row for each new user.
-- `user_profiles`, `tasks`, `jobs`, `documents`, `llm_usage_log`,
-  `budget_counters`, `rate_limits`.
-- SQL functions for task claiming, heartbeats, finishing, retries, approval,
-  cancellation, rate limiting and token budget reservation.
-- Row Level Security on every user-owned table, plus a private `resumes` bucket
-  with a 10 MB / PDF-only limit.
+```bash
+supabase start                 # starts local Postgres/Auth/Storage/Studio (Docker)
+supabase status                # prints local API URL, anon/service keys, DB URL
+supabase stop                  # stops containers, keeps local data
+```
+
+Configure `.env` (or export for the shell) to point at the **local** project from
+`supabase status`:
+
+- `SUPABASE_URL` = local API URL (typically `http://127.0.0.1:54321`)
+- `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` = local keys from status
+- `SUPABASE_JWKS_URL` = `<local API URL>/auth/v1/.well-known/jwks.json`
+- `DATABASE_URL` = local Postgres URL (typically `postgresql://postgres:postgres@127.0.0.1:54322/postgres`)
+- `API_BASE_URL` / `WEB_ORIGIN` stay local (`http://localhost:8000`, `http://localhost:5173`)
+
+Apply migrations to the local database (explicit env var wins over `.env`):
+
+```bash
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres bun run db:migrate
+```
+
+Reset disposable local data and rebuild schema from committed migrations:
+
+```bash
+supabase stop
+docker volume rm supabase_db_vanguard-local 2>/dev/null || true  # removes local DB only
+supabase start
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres bun run db:migrate
+```
+
+(Volume name may vary by Supabase CLI version; `supabase status` / Docker can confirm.
+This wipes **local** data only — never run destructive resets against the hosted project.)
+
+**Migration history rule:** this repo uses `public.schema_migrations` written by
+`bun run db:migrate` as the single source of truth. Do **not** use
+`supabase db reset` or `supabase db push` for this repo: they write Supabase
+CLI's own migration history, and a later `bun run db:migrate` would re-apply DDL
+and fail. Keep local and cloud histories consistent by applying the same SQL
+files through `bun run db:migrate`.
+
+### 3b. Cloud promotion (explicit, reviewed)
+
+Cloud credentials and production data stay out of ordinary local development.
+Promotion applies migrations, never local rows/files/secrets.
+
+1. Create a new `supabase/migrations/<timestamp>_<name>.sql` file.
+2. Test against a **clean** local database (reset + `bun run db:migrate`).
+3. Review RLS policies, grants, functions, triggers, and Storage effects.
+4. Apply the same migration to the hosted project in an explicit reviewed release
+   step: `DATABASE_URL=<hosted pooler URL> bun run db:migrate`.
+5. Verify `public.schema_migrations` on the hosted DB lists the new file.
+   Supabase dashboard/CLI history, if used, must be kept identical — prefer this
+   single path.
+
+Never copy local database dumps containing user data into production. Never
+commit secrets or local Supabase state (`supabase/.branches`, `supabase/.temp`).
+
+### Hosted project (existing)
+
+If using the hosted project directly, copy the pooler `DATABASE_URL` from the
+dashboard and run `bun run db:migrate`. If you paste SQL into the dashboard
+editor, `public.schema_migrations` is not written and a later `bun run db:migrate`
+will try to re-apply DDL and fail — prefer the pooler URL.
 
 ### Plain Postgres for tests
 

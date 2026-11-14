@@ -1,0 +1,54 @@
+# Local Supabase configuration. No secrets live here.
+# Install: https://supabase.com/docs/guides/cli
+# Start:   supabase start
+# Status:  supabase status  (prints local API URL, DB URL, keys)
+
+project_id = "vanguard-local"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[db.pooler]
+enabled = false
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "10MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+# Disable for local development so sign-up returns a session immediately.
+# Keep enabled in production.
+enable_confirmations = false
+min_interval = 60
+
+[auth.sms]
+enable_signup = false
+enable_confirmations = false
+
+[analytics]
+enabled = false
