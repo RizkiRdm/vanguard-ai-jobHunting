@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { parseEnv } from './env.ts';
+import type { PathLike } from 'node:fs';
+import { resolve } from 'node:path';
+import { describe, expect, it, vi } from 'vitest';
+import { getEnv, parseEnv, REPO_ROOT_ENV, setEnv } from './env.ts';
 
 const REQUIRED = {
   DATABASE_URL: 'postgres://u:p@localhost:5432/db',
@@ -33,5 +35,19 @@ describe('parseEnv', () => {
 
   it('reads BROWSER_HEADLESS=false as false', () => {
     expect(parseEnv({ ...REQUIRED, BROWSER_HEADLESS: 'false' }).BROWSER_HEADLESS).toBe(false);
+  });
+});
+
+describe('getEnv', () => {
+  it('loads .env from the working directory and the repo root', () => {
+    setEnv(parseEnv({ ...REQUIRED }));
+    const calls: Array<string | undefined> = [];
+    const spy = vi.spyOn(process, 'loadEnvFile').mockImplementation((path?: PathLike) => {
+      calls.push(typeof path === 'string' ? path : undefined);
+    });
+    getEnv();
+    spy.mockRestore();
+    expect(calls).toContain(resolve(process.cwd(), '.env'));
+    expect(calls).toContain(REPO_ROOT_ENV);
   });
 });

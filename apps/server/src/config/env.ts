@@ -1,4 +1,10 @@
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
+
+// Repo root, independent of the working directory: `bun --filter` runs
+// workspace scripts with cwd = apps/server, where a root .env is invisible.
+export const REPO_ROOT_ENV = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../.env');
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -57,11 +63,12 @@ export function parseEnv(source: NodeJS.ProcessEnv = process.env): Env {
 }
 
 export function getEnv(): Env {
-  // Node >= 20.12 loads .env from the working directory; a missing file is fine.
-  try {
-    process.loadEnvFile();
-  } catch {
-    // No .env file: rely on the real environment.
+  for (const path of [resolve(process.cwd(), '.env'), REPO_ROOT_ENV]) {
+    try {
+      process.loadEnvFile(path);
+    } catch {
+      // No .env file at this path: rely on the real environment.
+    }
   }
   cached ??= parseEnv();
   return cached;
