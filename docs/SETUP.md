@@ -6,15 +6,32 @@ and `supabase/migrations` wins.
 
 ## 1. Prerequisites
 
-- Node.js 22 or newer (`node -v`) — `@supabase/server` requires it
+- Node.js 22 or newer (`node -v`) — runtime for the API, worker and tooling
+- Bun 1.4.4 or newer (`bun -v`) — package manager and script runner; it does not replace the Node runtime
 - A Supabase project with Auth enabled
 - A Gemini API key from Google AI Studio
 - Chromium for Playwright
 
 ```bash
-npm install
-npx playwright install chromium --with-deps
+bun install
+node_modules/.bin/playwright install chromium --with-deps
 ```
+
+### Migrating from npm to Bun
+
+On an existing checkout, move from `package-lock.json` to `bun.lock`; keep
+Node for execution:
+
+```bash
+bun install                             # writes bun.lock and migrates resolved versions
+bun ci                                  # verify a frozen-lockfile install, as CI does
+bun run check
+rm package-lock.json                    # once `bun ci` and check pass
+```
+
+Command names stay the same: `bun run check`, `bun run doctor`, `bun run
+db:migrate`. `bun run test` runs Vitest; do not use `bun test` here. Docker uses the
+Bun binary only to install and build, then runs the Node runtime.
 
 ## 2. Environment
 
@@ -49,7 +66,7 @@ applied in filename order. A fresh Supabase project needs the steps below; the
 project referenced by `.env` already has them.
 
 ```bash
-npm run db:migrate
+bun run db:migrate
 ```
 
 The runner records applied files in `public.schema_migrations`, so re-running it is
@@ -62,7 +79,7 @@ cannot be expressed in Drizzle, so do not use `drizzle-kit push`.
 
 If you can reach the project only through the Supabase dashboard, paste each file
 into the SQL editor in filename order. If you do that, `public.schema_migrations`
-is not written, so a later `npm run db:migrate` will try to apply the same DDL
+is not written, so a later `bun run db:migrate` will try to apply the same DDL
 again and fail. Prefer the pooler URL and the command above.
 
 What the migrations create:
@@ -84,7 +101,7 @@ Integration tests need a database with the Supabase schemas stubbed:
 docker run -d --name vanguard-pg -e POSTGRES_PASSWORD=pw -p 5433:5432 postgres:16
 psql postgres://postgres:pw@127.0.0.1:5433/postgres -f supabase/local-stub.sql
 TEST_DATABASE_URL=postgres://postgres:pw@127.0.0.1:5433/postgres \
-  npx vitest run apps/server/src/modules/tasks/repository.integration.test.ts
+  bunx vitest run apps/server/src/modules/tasks/repository.integration.test.ts
 ```
 
 `local-stub.sql` creates the `auth`/`storage` schemas, `auth.uid()`, and the
@@ -93,19 +110,27 @@ TEST_DATABASE_URL=postgres://postgres:pw@127.0.0.1:5433/postgres \
 ## 4. Supabase Auth
 
 - Email/password is the only enabled provider.
-- For local development you can turn off "Confirm email" so sign-up returns a
-  session immediately; keep it on in production.
+- **Local development:** disable "Confirm email" in Supabase Auth so sign-up
+  returns a session immediately. If confirmation is enabled, sign-up succeeds but
+  `signInWithPassword` fails with "Email not confirmed" until the user clicks the
+  confirmation link (or the address is confirmed in the Supabase dashboard). The
+  app shows this state explicitly and must not imply the account is ready to sign
+  in.
+- **Production:** keep "Confirm email" enabled.
 - Users are created through the UI at `/login`. There is no admin endpoint and no
   way to mint a token, by design.
+- Passwords are owned by Supabase Auth (`auth.users`). Application tables
+  (`public.users`, `public.user_profiles`) must never store plaintext passwords
+  or password hashes.
 
 ## 5. Run it
 
 Three processes, three terminals:
 
 ```bash
-npm run dev:server   # Hono API on :8000
-npm run dev:web      # SvelteKit on :5173
-npm run worker       # claims tasks, drives Chromium
+bun run dev:server   # Hono API on :8000
+bun run dev:web      # SvelteKit on :5173
+bun run worker       # claims tasks, drives Chromium
 ```
 
 Open `http://localhost:5173`, sign up, fill in the profile, upload a PDF resume,
@@ -114,8 +139,8 @@ then create a discovery task. The worker picks it up within `WORKER_POLL_MS`.
 ## 6. Verify the setup
 
 ```bash
-npm run doctor    # node, deps, lockfile, env names, Playwright, migrations
-npm run check     # typecheck → lint → format:check → test → build
+bun run doctor    # node, deps, lockfile, env names, Playwright, migrations
+bun run check     # typecheck → lint → format:check → test → build
 ```
 
 `doctor` names what is missing without printing any value. `check` is the same gate CI
@@ -134,19 +159,19 @@ is not running or cannot reach the database; check its log output first.
 
 ## 7. Common problems
 
-Start with `npm run doctor`; it reports which prerequisite, dependency or env name is
+Start with `bun run doctor`; it reports which prerequisite, dependency or env name is
 missing, without printing any secret value.
 
-| Symptom                                | Cause                                                                | Fix                                                                                         |
-| -------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Startup lists missing env fields       | Zod env validation                                                   | Fill those fields in `.env`; nothing is defaulted                                           |
-| `/ready` returns 503                   | `DATABASE_URL` wrong, password not set, or pooler region wrong       | Copy the pooler string from the dashboard, keep `?sslmode=require`                          |
-| Upload returns 415                     | File is not a real PDF                                               | The server checks the `%PDF-` header, not just the extension                                |
-| Task stuck in `queued`                 | Worker down, or lease logic never ran                                | Start `npm run worker`; after `TASK_LEASE_SECONDS` a stale claim is requeued                |
-| Task stuck in `running`                | Worker died mid-task                                                 | Wait for the lease to expire; `reclaim_expired_tasks` requeues it, then retries are bounded |
-| Browser fails to launch in a container | Missing shared libraries or sandbox                                  | `npx playwright install --with-deps chromium`; `--no-sandbox` is already passed             |
-| Web build fails on env                 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` or `API_BASE_URL` missing | Set them in the build environment; `apps/web/src/env.ts` validates at build and start       |
-| 401 from the web app                   | Session cookie expired                                               | Sign in again; tokens are short lived and there is no refresh-token design yet              |
+| Symptom                                | Cause                                                                | Fix                                                                                           |
+| -------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Startup lists missing env fields       | Zod env validation                                                   | Fill those fields in `.env`; nothing is defaulted                                             |
+| `/ready` returns 503                   | `DATABASE_URL` wrong, password not set, or pooler region wrong       | Copy the pooler string from the dashboard, keep `?sslmode=require`                            |
+| Upload returns 415                     | File is not a real PDF                                               | The server checks the `%PDF-` header, not just the extension                                  |
+| Task stuck in `queued`                 | Worker down, or lease logic never ran                                | Start `bun run worker`; after `TASK_LEASE_SECONDS` a stale claim is requeued                  |
+| Task stuck in `running`                | Worker died mid-task                                                 | Wait for the lease to expire; `reclaim_expired_tasks` requeues it, then retries are bounded   |
+| Browser fails to launch in a container | Missing shared libraries or sandbox                                  | `node_modules/.bin/playwright install --with-deps chromium`; `--no-sandbox` is already passed |
+| Web build fails on env                 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` or `API_BASE_URL` missing | Set them in the build environment; `apps/web/src/env.ts` validates at build and start         |
+| 401 from the web app                   | Session cookie expired                                               | Sign in again; tokens are short lived and there is no refresh-token design yet                |
 
 ## 8. Deployment notes
 
@@ -154,9 +179,9 @@ Supabase hosts Postgres, Auth and Storage. It does not run the browser worker.
 
 Deploy three things:
 
-1. The API: `npx tsx apps/server/src/api.ts`
-2. The worker: `npx tsx apps/server/src/worker.ts`
-3. The web app: `npm run build` then `node apps/web/build`
+1. The API: `node_modules/.bin/tsx apps/server/src/api.ts`
+2. The worker: `node_modules/.bin/tsx apps/server/src/worker.ts`
+3. The web app: `bun run build` then `node apps/web/build`
 
 Requirements: a host that keeps Node processes alive, at least 1 GB RAM for
 Chromium, and a writable directory for `.browser-state/` (or accept that sessions

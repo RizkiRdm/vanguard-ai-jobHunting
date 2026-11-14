@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createBrowserClient } from '@supabase/ssr';
   import { goto } from '$app/navigation';
+  import { authErrorMessage, CONFIRM_EMAIL_INFO, signupOutcome } from '../../lib/auth';
 
   let { data } = $props();
 
@@ -26,20 +27,20 @@
       if (mode === 'signin') {
         const { error } = await getClient().auth.signInWithPassword({ email, password });
         if (error) {
-          errorMessage = error.message;
+          errorMessage = authErrorMessage(error.message);
           return;
         }
         await goto('/', { invalidateAll: true });
       } else {
         const { data: signUpData, error } = await getClient().auth.signUp({ email, password });
         if (error) {
-          errorMessage = error.message;
+          errorMessage = authErrorMessage(error.message);
           return;
         }
-        if (signUpData.session) {
+        if (signupOutcome(Boolean(signUpData.session)).kind === 'session') {
           await goto('/', { invalidateAll: true });
         } else {
-          infoMessage = 'Account created. Confirm your email, then sign in.';
+          infoMessage = CONFIRM_EMAIL_INFO;
           mode = 'signin';
         }
       }
