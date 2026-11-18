@@ -1,6 +1,6 @@
 # Vanguard AI Job Hunting — Project Memory
 
-**Last updated:** 2026-11-01 | **Commit:** `1813e12` (main) | **Branch:** main
+**Last updated:** 2026-11-19 | **Commit:** `6a87dd9` (main) | **Branch:** main
 
 ---
 
@@ -8,7 +8,7 @@
 
 Vanguard is an AI job hunting assistant that discovers real job listings, prepares application materials, and fills in application forms in a browser. **Never submits without explicit user approval.**
 
-**Status:** MVP — schema/RLS/bucket applied to one hosted Supabase project. API/worker/web run locally. **Nothing deployed. No live job-site run. No real user session.**
+**Status:** Active Development — Roadmap plan approved (`docs/vanguard-implementation-plan-g-2026-11-18-approved.md`). Issues #88, #93, #89, #90, #94 resolved and committed. Next: Issues #91 & #92.
 
 ---
 
@@ -23,7 +23,7 @@ Vanguard is an AI job hunting assistant that discovers real job listings, prepar
 | Auth | Supabase Auth (JWT verification via `@supabase/server` + JWKS) |
 | Storage | Supabase Storage (private `resumes` bucket, 10 MB, PDF only) |
 | Query Layer | Drizzle ORM over `postgres.js` (SQL remains authoritative) |
-| Migrations | Plain SQL in `supabase/migrations/` applied via `npm run db:migrate` |
+| Migrations | Plain SQL in `supabase/migrations/` applied via `bun run db:migrate` |
 | AI | Gemini via Vercel AI SDK (`@ai-sdk/google`) with JSON validation + token budget |
 | Contracts | Zod in `packages/contracts` (shared server/web) |
 | Testing | Vitest (unit), integration tests need `TEST_DATABASE_URL` |
@@ -86,15 +86,25 @@ docs/
 - ✅ Function grants: `anon` blocked, `service_role` allowed, `search_path` pinned
 - ✅ Private `resumes` bucket (PDF, 10 MB)
 - ✅ Task queue: atomic claim (`SKIP LOCKED`), leases, heartbeat, reclaim, retry, approval gate
-- ✅ Browser automation: per-user contexts, `.browser-state/` (0700/0600), no CDP exposure
+- ✅ Browser automation (Playwright): per-user contexts, `.browser-state/` (0700/0600), no CDP exposure
 - ✅ AI: `generateJson` with Zod validation, token reservation + settlement, budget 429
 - ✅ CI workflow updated: Postgres service container + local-stub.sql for integration tests (TEST_DATABASE_URL set)
 - ✅ SvelteKit web: login, profile, resume upload, task list/detail, discovery/apply forms, polling
 - ✅ Shared contracts (`packages/contracts`)
-- ✅ All gates green: typecheck, lint, format, 10 unit tests (4 DB tests skipped without `TEST_DATABASE_URL`)
 - ✅ Documentation rewrite (Diátaxis): README, SETUP, ARCHITECTURE, REFERENCE, AUDIT, AGENTS
-- ✅ Mobile-first dark UI system (issue #82): docs/DESIGN.md + tokens in app.css, StatusBadge, +error page, dashboard/profile/login/task detail restyled; npm run check green
-- ✅ Git: `main` at `d329c31`, `feature/ts-hono-migration` pushed, recovery branch/tags local only
+- ✅ Mobile-first dark UI system (issue #82): docs/DESIGN.md + tokens in app.css, StatusBadge, +error page, dashboard/profile/login/task detail restyled
+- ✅ **#84 (2026-11-14, `bcac122`)**: worker startup env loading fixed — `getEnv()` loads cwd + repo-root `.env` (`REPO_ROOT_ENV`) so `bun run worker` boots from root and `apps/server`; regression test in `apps/server/src/config/env.test.ts`.
+- ✅ **#85 (2026-11-14, `f832ce4`)**: auth email-confirmation audit — confirmed `public.users` stores no passwords (Supabase Auth owns credentials); actionable sign-in/signup messaging via `apps/web/src/lib/auth{.ts,.test.ts}`; vitest includes web tests; `docs/SETUP.md` clarified (local confirm-email off, prod on).
+- ✅ **#86 (2026-11-14, `3a7ed00`)**: local Supabase + cloud promotion workflow defined — `supabase/config.toml`, gitignored local state, `docs/SETUP.md`/`docs/ARCHITECTURE.md` document single `public.schema_migrations` history via `bun run db:migrate` and explicit migration-only promotion (no local data/secrets).
+- ✅ **#87 (2026-11-14, `03b9c3e`, Phase 1 defer)**: `agent-browser` evaluated (0.41.1 POC: open/snapshot/fill/click/timeout/cleanup). Findings + **defer** recorded in `docs/AGENT_BROWSER_EVALUATION.md`; Playwright unchanged, Phase 2 requires explicit go.
+- ✅ **#88 (2026-11-18, `b6429cd`)**: DuckDuckGo TLS cert navigation error fixed — canonical endpoint `https://duckduckgo.com/html/` with fallback to `https://html.duckduckgo.com/html/`, retry loop, unwrap redirect decoding, and regression unit tests.
+- ✅ **#93 (2026-11-19, `6a87dd9`)**: UI standardization with Tailwind CSS v4 & DaisyUI v5 — `PasswordInput.svelte` with show/hide toggle and full ARIA accessibility, DaisyUI forms, cards, alerts, badges across app.
+- ✅ **#89 (2026-11-19, `6a87dd9`)**: Routing restructure — public landing page at `/`, authenticated user dashboard moved to `/dashboard`, `PUBLIC_PATHS` updated to permit `/`, `/login`, `/auth/callback`, auth redirects updated.
+- ✅ **#90 (2026-11-19, `6a87dd9`)**: Google OAuth + email/password login — "Continue with Google" OAuth trigger, `/auth/callback/+server.ts` code exchange for session cookies with open-redirect protection.
+- ✅ **#94 (2026-11-19, `6a87dd9`)**: Public responsive landing page at `/` — built with DaisyUI + Anime.js micro-interactions, responsive mobile/tablet/desktop layouts, strict human-in-the-loop guarantee banner, `prefers-reduced-motion` compliance.
+- ✅ Latest checks (2026-11-19): `bun run typecheck`, `bun run lint`, `bun run test` (26 passed, 4 DB skipped), `bun run build` all pass.
+- ✅ Roadmap Plan: `docs/vanguard-implementation-plan-g-2026-11-18-approved.md` copied from Plannotator review.
+- ✅ Git: `main` at `6a87dd9`.
 
 ---
 
@@ -104,21 +114,24 @@ docs/
 |------|---------|-------------------|
 | **Credentials** | Real `SUPABASE_SECRET_KEY`, DB password, publishable key were in `.env.example` locally (never committed, now placeholders) | Rotate `SUPABASE_SECRET_KEY` in dashboard |
 | **Wrong project residue** | Empty `resumes` bucket on `orjicvxvqrvrazazclha` (cannot delete via SQL, `storage.protect_delete`) | Delete in that project's dashboard → Storage |
-| **Auth E2E** | Only 401 path verified; no real signed-in user token tested | Sign up/in via `/login`, call `/tasks` with real token |
+| **Auth E2E** | Only 401 path verified; no real signed-in user token tested. #85 improved messaging/docs but confirm-email toggle not reproduced on a live/local Supabase instance in this env. | Sign up/in via `/login`, call `/tasks` with real token; verify confirm-email on/off behavior |
 | **Cross-account isolation** | Not tested at runtime | Second account cannot read first's task/resume (expect 404) |
+| **Local Supabase verification** | #86 documented workflow/config but Supabase CLI not installed here; `supabase start`/clean rebuild not executed | Install CLI, run local stack, build from migrations, verify `public.schema_migrations` |
+| **Cloud promotion** | Documented as explicit/reviewed; not executed | Apply migrations to hosted project via `DATABASE_URL=<pooler> bun run db:migrate` when ready |
 | **DB integration tests** | 4 tests skipped (need `TEST_DATABASE_URL`) | Run against real DB or decide CI strategy |
 | **Discover task** | Never run against live DuckDuckGo + Gemini | One end-to-end: queued → running → succeeded |
 | **Apply task** | Never run to approval gate | One end-to-end: stops at `waiting_for_user`, approve re-queues with `submit_selector` |
 | **Token budget** | 429 path not tested live | Exceed `DAILY_TOKEN_BUDGET`, confirm 429 + `llm_usage_log` entry |
-| **Playwright** | Chromium launch + `.browser-state/` perms not verified on target | `npx playwright install --with-deps chromium` |
-| **CI** | Never ran on GitHub Actions | Push, confirm typecheck/lint/format/test/build pass |
+| **Playwright** | Chromium launch + `.browser-state/` perms not verified on target | `node_modules/.bin/playwright install --with-deps chromium` |
+| **CI** | Never ran on GitHub Actions for current state | Push/confirm typecheck/lint/format/test/build pass |
 | **Deployment** | No host chosen for long-lived Node + Chromium | Decide before any deploy work |
+| **Repo hygiene** | Unrelated dirty/untracked files remain; repo-wide `prettier --check .` fails on them | Clean/format or scope format checks in CI intentionally |
 
 ---
 
 ## Key Architectural Decisions
 
-1. **SQL is authoritative** — `drizzle-kit migrate`/`push` NOT used. RLS, triggers, grants, bucket cannot be expressed in Drizzle schema. Migrations applied via `npm run db:migrate` (idempotent per filename).
+1. **SQL is authoritative** — `drizzle-kit migrate`/`push` NOT used. RLS, triggers, grants, bucket cannot be expressed in Drizzle schema. Migrations applied via `bun run db:migrate` (idempotent per filename).
 2. **Drizzle = query types only** — `src/db/schema.ts` mirrors tables for typing. JSONB cast as `${JSON.stringify(v)}::jsonb`.
 3. **Transaction pooler required** — Direct host is IPv6-only. `DATABASE_URL` must be `postgresql://postgres.<ref>:<pw>@aws-0-<region>.pooler.supabase.com:6543/postgres` with `prepare:false`.
 4. **Auth via JWKS** — `verifyAuth` from `@supabase/server` validates tokens locally against `SUPABASE_JWKS_URL`. No per-request Auth API call.
@@ -132,18 +145,18 @@ docs/
 ## Commands
 
 ```bash
-npm install
+bun install
 cp .env.example .env          # Fill real values (see SETUP.md)
-npm run db:migrate            # Apply 6 SQL files (idempotent)
-npm run dev:web               # http://localhost:5173
-npm run dev:server            # http://localhost:8000
-npm run worker                # Background task worker
+bun run db:migrate            # Apply 6 SQL files (idempotent)
+bun run dev:web               # http://localhost:5173
+bun run dev:server            # http://localhost:8000
+bun run worker                # Background task worker
 
-npm run typecheck             # tsc + svelte-check
-npm run lint
-npm test                      # vitest (10 pass, 4 skipped)
-npm run build                 # Web production build
-npm run format:check
+bun run typecheck             # tsc + svelte-check
+bun run lint
+bun run test                      # vitest (10 pass, 4 skipped)
+bun run build                 # Web production build
+bun run format:check
 ```
 
 ---
@@ -165,10 +178,11 @@ npm run format:check
 
 ---
 
-## Open GitHub Issue
+## Open GitHub Issues
 
-**#82** — Define and Implement a Consistent, Mobile-First UI System (implemented; browser/a11y verification deferred).
-https://github.com/RizkiRdm/vanguard-ai-jobHunting/issues/82
+- Phase 5: **#91** — Auto-populate profile fields from uploaded resumes (Gemini AI text extraction & autofill).
+- Phase 6: **#92** — Human-in-the-loop task resumption & notifications (dashboard alert banner for `waiting_for_user`).
+- Resolved in this cycle: #88 (`b6429cd`), #93 (`6a87dd9`), #89 (`6a87dd9`), #90 (`6a87dd9`), #94 (`6a87dd9`).
 
 ---
 
@@ -184,11 +198,12 @@ https://github.com/RizkiRdm/vanguard-ai-jobHunting/issues/82
 
 ## Next Session: Start Here
 
-1. Read this file + `AGENTS.md` + `docs/SETUP.md`
-2. Check GitHub issue #79 for the pre-flight checklist
-3. Decide which blocker to tackle first (recommend: rotate secret key + auth E2E)
-4. Run `npm run typecheck && npm run lint && npm test` to confirm baseline
-5. DO NOT push/deploy without explicit approval
+1. Read `docs/vanguard-implementation-plan-g-2026-11-18-approved.md` for prioritized roadmap.
+2. Read this file + `AGENTS.md`.
+3. Baseline checks: `bun run typecheck && bun run lint && bun run test && bun run build` (expect all passing, 26 unit tests pass).
+4. Implement Phase 5: Issue #91 (Resume upload text extraction & Gemini profile autofill in `apps/server/src/modules/resumes/` and `apps/web/src/routes/profile/`).
+5. Implement Phase 6: Issue #92 (Task resumption & notification alerts for `waiting_for_user` tasks in `apps/web/src/routes/dashboard/` and task details).
+6. Commit and verify incrementally.
 
 ---
 
