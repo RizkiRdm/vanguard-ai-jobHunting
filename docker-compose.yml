@@ -6,7 +6,7 @@ services:
     env_file: .env
     ports:
       - '8000:8000'
-    command: ['npx', 'tsx', 'apps/server/src/api.ts']
+    command: ['node_modules/.bin/tsx', 'apps/server/src/api.ts']
 
   worker:
     build: .
@@ -14,7 +14,7 @@ services:
     # Browser contexts keep per-user state here; mount a volume in production.
     volumes:
       - browser-state:/app/.browser-state
-    command: ['npx', 'tsx', 'apps/server/src/worker.ts']
+    command: ['node_modules/.bin/tsx', 'apps/server/src/worker.ts']
 
 volumes:
   browser-state:

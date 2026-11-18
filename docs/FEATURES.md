@@ -1,7 +1,7 @@
 # Feature map
 
 Where each feature lives, end to end. Read this before searching. Paths are relative to the repo
-root. Every path here is checked in `npm run check` territory only if a test covers it — the last
+root. Every path here is checked in `bun run check` territory only if a test covers it — the last
 column says honestly what exists.
 
 Legend: **UI** = route under `apps/web/src/routes` · **API** = route mounted in `app.ts` under
@@ -26,7 +26,7 @@ Legend: **UI** = route under `apps/web/src/routes` · **API** = route mounted in
 | Health / readiness                | none                                                                                                              | `modules/health/routes.ts` → `GET /health` (no auth), `GET /ready` (DB ping, 503 when down)                                                                                                                      | —                                                             | —                                                                                                         | —                                                                                    | none                                                                                 |
 | Env config                        | `apps/web/src/env.ts`                                                                                             | `apps/server/src/config/env.ts`                                                                                                                                                                                  | —                                                             | —                                                                                                         | —                                                                                    | `config/env.test.ts` (unit)                                                          |
 | Logging                           | —                                                                                                                 | `lib/logger.ts` (redacting child loggers)                                                                                                                                                                        | —                                                             | —                                                                                                         | —                                                                                    | `lib/logger.test.ts` (unit)                                                          |
-| Schema / migrations               | —                                                                                                                 | `supabase/migrations/*.sql`, `apps/server/src/scripts/migrate.ts` → `npm run db:migrate`; `apps/server/src/db/schema.ts` is a type mirror only                                                                   | —                                                             | `users`, `user_profiles`, `tasks`, `jobs`, `documents`, `llm_usage_log`, `budget_counters`, `rate_limits` | all 14 functions listed above                                                        | none                                                                                 |
+| Schema / migrations               | —                                                                                                                 | `supabase/migrations/*.sql`, `apps/server/src/scripts/migrate.ts` → `bun run db:migrate`; `apps/server/src/db/schema.ts` is a type mirror only                                                                   | —                                                             | `users`, `user_profiles`, `tasks`, `jobs`, `documents`, `llm_usage_log`, `budget_counters`, `rate_limits` | all 14 functions listed above                                                        | none                                                                                 |
 
 Notes:
 
@@ -34,7 +34,7 @@ Notes:
 - The web app never calls the API from the browser. Every API call goes through
   `apps/web/src/lib/server/api.ts` `callApi()` with the bearer token from the session cookie.
 - `repository.integration.test.ts` is the only test that touches Postgres; it skips when
-  `TEST_DATABASE_URL` is unset, so `npm test` reports it as skipped, not passing.
+  `TEST_DATABASE_URL` is unset, so `bun run test` reports it as skipped, not passing.
 
 ## Where do I add …?
 
@@ -50,8 +50,8 @@ Notes:
 ## Validating a change
 
 ```bash
-npm run doctor   # environment: node, deps, env names, Playwright, migrations
-npm run check    # typecheck → lint → format:check → test → build (same as CI)
+bun run doctor   # environment: node, deps, env names, Playwright, migrations
+bun run check    # typecheck → lint → format:check → test → build (same as CI)
 ```
 
 If `doctor` reports `TEST_DATABASE_URL unset`, the 4 database integration tests will skip; that is

@@ -14,14 +14,19 @@
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@vanguard/contracts": "*",
+    "animejs": "^4.5.0",
     "zod": "latest"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "latest",
     "@sveltejs/kit": "latest",
     "@sveltejs/vite-plugin-svelte": "latest",
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/animejs": "^3.1.13",
+    "daisyui": "^5.8.1",
     "svelte": "latest",
     "svelte-check": "latest",
+    "tailwindcss": "^4.3.5",
     "typescript": "latest",
     "vite": "latest"
   }

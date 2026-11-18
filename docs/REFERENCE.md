@@ -3,24 +3,28 @@
 Exact values, names and shapes. If this file and the code disagree, the code wins;
 fix the file.
 
-## npm scripts
+## Bun scripts
+
+Bun `1.4.4` is the package manager and script runner (`packageManager` in `package.json`).
+Install with `bun install`; CI and Docker use `bun ci`. Node and `tsx` remain the runtime.
+Use `bun run test` for Vitest — `bun test` is a different runner.
 
 | Script                 | Runs                                                    | Notes                                                                                 |
 | ---------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `npm run dev`          | every workspace's `dev`                                 | API + web together; no worker                                                         |
-| `npm run dev:server`   | `tsx watch src/api.ts` (`@vanguard/server`)             | API on `API_PORT`                                                                     |
-| `npm run dev:web`      | `vite dev --port 5173` (`@vanguard/web`)                | needs `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `API_BASE_URL`                      |
-| `npm run worker`       | `tsx src/worker.ts`                                     | long-running; claims tasks                                                            |
-| `npm run build`        | `vite build` (`@vanguard/web`)                          | adapter-node output in `apps/web/build`                                               |
-| `npm test`             | `vitest run`                                            | DB suite skips without `TEST_DATABASE_URL`                                            |
-| `npm run test:watch`   | `vitest`                                                |                                                                                       |
-| `npm run typecheck`    | `tsc -p apps/server` + `npm run check -w @vanguard/web` | `svelte-check`                                                                        |
-| `npm run check`        | typecheck → lint → format:check → test → build          | Same sequence as CI; the first failing step stops it                                  |
-| `npm run doctor`       | `node scripts/doctor.mjs`                               | Node, deps, lockfile, env names (no values), Playwright, migrations; exit 1 on errors |
-| `npm run lint`         | `eslint .`                                              | flat config, `no-explicit-any` is an error                                            |
-| `npm run format`       | `prettier --write .`                                    |                                                                                       |
-| `npm run format:check` | `prettier --check .`                                    |                                                                                       |
-| `npm run db:migrate`   | `tsx apps/server/src/scripts/migrate.ts`                | applies `supabase/migrations/*.sql`, records each name                                |
+| `bun run dev`          | every workspace's `dev`                                 | API + web together; no worker                                                         |
+| `bun run dev:server`   | `tsx watch src/api.ts` (`@vanguard/server`)             | API on `API_PORT`                                                                     |
+| `bun run dev:web`      | `vite dev --port 5173` (`@vanguard/web`)                | needs `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `API_BASE_URL`                      |
+| `bun run worker`       | `tsx src/worker.ts`                                     | long-running; claims tasks                                                            |
+| `bun run build`        | `vite build` (`@vanguard/web`)                          | adapter-node output in `apps/web/build`                                               |
+| `bun run test`             | `vitest run`                                            | DB suite skips without `TEST_DATABASE_URL`                                            |
+| `bun run test:watch`   | `vitest`                                                |                                                                                       |
+| `bun run typecheck`    | `tsc -p apps/server` + `bun --filter @vanguard/web check` | `svelte-check`                                                                        |
+| `bun run check`        | typecheck → lint → format:check → test → build          | Same sequence as CI; the first failing step stops it                                  |
+| `bun run doctor`       | `node scripts/doctor.mjs`                               | Node, deps, lockfile, env names (no values), Playwright, migrations; exit 1 on errors |
+| `bun run lint`         | `eslint .`                                              | flat config, `no-explicit-any` is an error                                            |
+| `bun run format`       | `prettier --write .`                                    |                                                                                       |
+| `bun run format:check` | `prettier --check .`                                    |                                                                                       |
+| `bun run db:migrate`   | `tsx apps/server/src/scripts/migrate.ts`                | applies `supabase/migrations/*.sql`, records each name                                |
 
 ## Environment variables
 

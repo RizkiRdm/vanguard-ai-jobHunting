@@ -4,6 +4,7 @@
   "version": "2.0.0",
   "description": "Vanguard AI job hunting system - TypeScript rewrite",
   "type": "module",
+  "packageManager": "bun@1.4.4",
   "engines": {
     "node": ">=22"
   },
@@ -12,15 +13,15 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspaces --if-present",
-    "dev:server": "npm run dev --workspace @vanguard/server",
-    "dev:web": "npm run dev --workspace @vanguard/web",
-    "worker": "npm run worker --workspace @vanguard/server",
-    "build": "npm run build --workspace @vanguard/web",
+    "dev": "bun --filter '*' --if-present dev",
+    "dev:server": "bun --filter @vanguard/server dev",
+    "dev:web": "bun --filter @vanguard/web dev",
+    "worker": "bun --filter @vanguard/server worker",
+    "build": "bun --filter @vanguard/web build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p apps/server && npm run check --workspace @vanguard/web",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm test && npm run build",
+    "typecheck": "tsc -p apps/server && bun --filter @vanguard/web check",
+    "check": "bun run typecheck && bun run lint && bun run format:check && bun run test && bun run build",
     "doctor": "node scripts/doctor.mjs",
     "db:migrate": "tsx apps/server/src/scripts/migrate.ts",
     "lint": "eslint .",
@@ -33,14 +34,15 @@
     "eslint": "latest",
     "prettier": "latest",
     "prettier-plugin-svelte": "^4.1.1",
+    "supabase": "^3.0.0",
     "typescript": "latest",
     "typescript-eslint": "latest",
     "vitest": "latest"
   },
-  "allowScripts": {
-    "esbuild@0.28.2": true,
-    "protobufjs@7.6.6": true
-  },
+  "trustedDependencies": [
+    "esbuild",
+    "protobufjs"
+  ],
   "dependencies": {
     "@supabase/server": "^1.9.2"
   }

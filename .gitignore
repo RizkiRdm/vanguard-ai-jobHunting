@@ -26,6 +26,17 @@ __pycache__/
 .ruff_cache/
 *.egg-info
 
+# Agent & scratch artifacts
+.agents/
+.codegraph/
+.gemini/
+.hermes/
+.opencode/
+.tmp/
+goals/
+graphify-out/
+skills-lock.json
+
 # Misc
 .DS_Store
 coverage/

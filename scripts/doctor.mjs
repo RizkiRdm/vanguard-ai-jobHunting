@@ -60,22 +60,16 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
-function missingDependencies() {
+function dependenciesHealthy() {
   try {
-    const tree = JSON.parse(
-      execFileSync('npm', ['ls', '--depth=0', '--json'], {
-        cwd: root,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-      }),
-    );
-    return tree.problems ?? [];
-  } catch (error) {
-    try {
-      return JSON.parse(String(error.stdout ?? '{}')).problems ?? [];
-    } catch {
-      return [{ code: 'npm-ls-failed' }];
-    }
+    execFileSync('bun', ['pm', 'ls'], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -113,30 +107,20 @@ function main() {
     report('fail', `node ${process.versions.node} is below the required ${pkg.engines?.node}`);
   }
 
-  if (existsSync(join(root, 'package-lock.json'))) {
-    report('ok', 'package-lock.json present');
+  if (existsSync(join(root, 'bun.lock'))) {
+    report('ok', 'bun.lock present');
   } else {
-    report('fail', 'package-lock.json missing - run npm install');
+    report('fail', 'bun.lock missing - run bun install');
   }
 
   if (existsSync(join(root, 'node_modules'))) {
     report('ok', 'node_modules present');
   } else {
-    report('fail', 'node_modules missing - run npm install');
+    report('fail', 'node_modules missing - run bun install');
   }
 
-  const problems = missingDependencies();
-  for (const problem of problems) {
-    if (problem.code === 'npm-ls-failed') {
-      report('warn', 'npm ls failed - run npm install');
-    } else if (problem.extraneous) {
-      report('warn', `${problem.name ?? problem.path} installed but not in package.json`);
-    } else {
-      report(
-        'fail',
-        `${problem.name ?? problem.path} ${problem.code ?? 'invalid'} - run npm install`,
-      );
-    }
+  if (!dependenciesHealthy()) {
+    report('warn', 'bun pm ls failed - run bun install');
   }
 
   const envPath = join(root, '.env');
@@ -168,16 +152,16 @@ function main() {
     else
       report(
         'warn',
-        'playwright installed but no chromium found - run npx playwright install chromium',
+        'playwright installed but no chromium found - run node_modules/.bin/playwright install chromium',
       );
   } else {
-    report('fail', 'playwright not installed - run npm install');
+    report('fail', 'playwright not installed - run bun install');
   }
 
   const migrationsDir = join(root, 'supabase', 'migrations');
   if (existsSync(migrationsDir)) {
     const count = readdirSync(migrationsDir).filter((name) => name.endsWith('.sql')).length;
-    report('ok', `${count} migrations in supabase/migrations (apply with npm run db:migrate)`);
+    report('ok', `${count} migrations in supabase/migrations (apply with bun run db:migrate)`);
   }
 
   console.log(lines.join('\n'));

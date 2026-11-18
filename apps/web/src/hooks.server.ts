@@ -4,7 +4,7 @@ import type { Handle } from '@sveltejs/kit/hooks';
 import { dev } from '$app/env';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '$app/env/public';
 
-const PUBLIC_PATHS = new Set(['/login']);
+const PUBLIC_PATHS = new Set(['/', '/login', '/auth/callback']);
 
 export const handle: Handle = async ({ event, resolve }) => {
   event.locals.supabase = createServerClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -32,7 +32,12 @@ export const handle: Handle = async ({ event, resolve }) => {
   }
 
   if (!user && !PUBLIC_PATHS.has(event.url.pathname)) {
-    redirect(303, '/login');
+    const redirectTo = event.url.pathname + event.url.search;
+    redirect(303, `/login?redirectTo=${encodeURIComponent(redirectTo)}`);
+  }
+
+  if (user && (event.url.pathname === '/login' || event.url.pathname === '/')) {
+    redirect(303, '/dashboard');
   }
 
   return resolve(event);

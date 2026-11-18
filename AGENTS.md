@@ -4,6 +4,16 @@ Guidance for AI coding agents and humans working in this repository. Read this
 before changing code. Deeper detail: `docs/ARCHITECTURE.md`, `docs/SETUP.md`,
 and the audit of the Python implementation this replaced: `docs/AUDIT.md`.
 
+## graphify
+Code graph at `graphify-out/`. Query before grep/read.
+
+Rules:
+- `graphify query "<question>"` for scoped subgraph
+- `graphify path "<A>" "<B>"` for relationships
+- `graphify explain "<concept>"` for focused concepts
+- GRAPH_REPORT.md only for broad architecture
+- After code changes, run `graphify update .`
+
 ## 1. What this is
 
 Vanguard is an AI job hunting assistant. It discovers real job listings,
@@ -11,8 +21,6 @@ prepares application material, and fills in application forms in a real browser.
 It never submits an application without an explicit approval recorded for that
 task.
 
-Status: MVP, not deployed. Treat every claim about runtime behaviour as unproven
-until you have run it.
 
 Stack: SvelteKit + Svelte 5 (web) · Hono on Node.js (API + worker) · Playwright
 (browser automation) · Supabase Postgres, Auth and private Storage · Zod
@@ -37,7 +45,7 @@ apps/server/
   src/db/schema.ts        typed mirror of the SQL migrations (query types only)
 packages/contracts/       shared Zod schemas and types
 supabase/migrations/      schema, SQL functions, RLS policies (apply in name order)
-scripts/doctor.mjs        local environment diagnostic (`npm run doctor`)
+scripts/doctor.mjs        local environment diagnostic (`bun run doctor`)
 docs/FEATURES.md          feature map: UI → API → contract → table → tests
 docs/                     architecture, setup, reference, audit
 ```
@@ -45,16 +53,16 @@ docs/                     architecture, setup, reference, audit
 ## 3. Quick start
 
 ```bash
-npm install
+bun install
 cp .env.example .env      # fill in real values, see docs/SETUP.md
-npm run db:migrate        # applies supabase/migrations/*.sql
-npm run dev:web           # http://localhost:5173
-npm run dev:server        # http://localhost:8000
-npm run worker            # background task worker
+bun run db:migrate        # applies supabase/migrations/*.sql
+bun run dev:web           # http://localhost:5173
+bun run dev:server        # http://localhost:8000
+bun run worker            # background task worker
 ```
 
-Checks: `npm run check` (typecheck → lint → format:check → test → build, same as CI)
-and `npm run doctor` (environment diagnostic). Both must pass before you call work done.
+Checks: `bun run check` (typecheck → lint → format:check → test → build, same as CI)
+and `bun run doctor` (environment diagnostic). Both must pass before you call work done.
 
 ## 4. Architecture rules
 
@@ -91,7 +99,7 @@ and `npm run doctor` (environment diagnostic). Both must pass before you call wo
 ## 6. Data rules
 
 - Schema changes go in a new file in `supabase/migrations/`. Apply them with
-  `npm run db:migrate`. `drizzle-kit migrate` and `drizzle-kit push` are not used:
+  `bun run db:migrate`. `drizzle-kit migrate` and `drizzle-kit push` are not used:
   RLS, triggers, grants and the queue functions cannot be expressed in
   `src/db/schema.ts`, which is a type mirror only. Never edit a migration that has
   been applied to a database; add a new one.
@@ -143,7 +151,7 @@ These have all cost time before. Check them first when something behaves oddly.
   `details.submit_selector` after approval. Do not change it to a replace.
 - **Migrations are tracked twice:** `public.schema_migrations` (our runner) and
   Supabase's own history (MCP `apply_migration`). Apply remote changes through one
-  path and keep them equal; `npm run db:migrate` is idempotent per file name.
+  path and keep them equal; `bun run db:migrate` is idempotent per file name.
 - **SQL files are the schema, Drizzle is only the query layer.** `drizzle-kit push`
   is not used; RLS policies, triggers and the queue functions cannot be expressed
   in `src/db/schema.ts`, so generate nothing from it.
@@ -164,7 +172,7 @@ These have all cost time before. Check them first when something behaves oddly.
    from memory of the Python version; it is gone (see `docs/AUDIT.md`).
 2. State assumptions. If the request is ambiguous or touches security, ask.
 3. Make the smallest change that fully works, including callers, tests and docs.
-4. Verify with `npm run check` (and `npm run doctor` when the environment is suspect).
+4. Verify with `bun run check` (and `bun run doctor` when the environment is suspect).
    A change is not done because it compiles.
 5. Report exactly what you ran and what you did not verify. Never claim a deployed,
    live-browser or third-party result you have not observed.
@@ -181,3 +189,44 @@ symbol. If `.codegraph/` exists, `codegraph explore "<symbols>"` answers most
 - Reintroducing Python or the old FastAPI/WebSocket design.
 - Multi-tenant organisations, billing, mobile apps.
 - Storing files locally instead of Supabase Storage.
+
+## 11. Browser Automation
+
+Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
+
+Core workflow:
+1. `agent-browser open <url>` - Navigate to page
+2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
+3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
+4. Re-snapshot after page changes
+
+## 12. Git Rules
+- Every task MUST end with a commit and a push to `origin`. Uncommitted work is unfinished work.
+- MUST run the Verification Commands gate BEFORE committing. A commit that fails `go test ./...` or `gofmt -l .` is a broken commit; fix it in the same change, never amend around a failure.
+- Stage files selectively (`git add <path>`). Never `git add -A` or `git add .` — this repo gitignores `.env*`, `paperviz.db*`, `.opencode/`, and scratch output, and a blind add is how those leak into history.
+- Never commit secrets. `.env.development`, real API keys, `paperviz.db`, and build output stay ignored.
+- Do NOT force-push to `main`. Do NOT rewrite published history. If a commit must be corrected, add a new commit.
+- Do NOT use `git update-index --skip-worktree` or `--assume-unchanged` to hide local changes.
+- After code changes, run `graphify update .` so the code graph does not lag the tree.
+
+### Commit messages
+Conventional Commits, lowercase, imperative mood, no trailing period:
+
+```text
+<type>(<scope>): <subject ≤50 chars>
+```
+- Allowed types: `feat`, `fix`, `docs`, `refactor`, `test`, `perf`, `build`, `ci`, `chore`, `revert`.
+- Add a body only when the *why* is not obvious from the subject. Never restate the diff.
+- Scopes in use: `byok`, `web`, `db`, `mcp`, `ops`, `auth`, `admin`, `pipeline`, `evidence`, `docs`.
+- Refer to plan/ADR ids when the change belongs to one: `feat(byok): ... (P07)`.
+
+### Versioning and tags — SemVer
+PaperViz follows [Semantic Versioning](https://semver.org). The version lives in a git tag; there is no version constant in the code.
+
+- Tag format: `vMAJOR.MINOR.PATCH`, annotated (`git tag -a`), message = one-line summary of the release.
+- The project is **pre-1.0**. `MAJOR` stays `0` until the REST contract in `docs/openapi.yaml` is declared stable; bumping to `1.0.0` is an explicit owner decision, not an agent decision.
+- `MINOR` — a feature, or a **breaking change while `MAJOR` is 0** (pre-1.0 semver: anything may break). New endpoint, new MCP tool, removed field, changed response shape, removed feature.
+- `PATCH` — backward-compatible fix or internal change. Bug fix, dependency bump, docs, refactor with no contract change, test, CI.
+- Tag only a state that passed the full Verification Commands gate on a clean tree.
+- Tag every user-visible deploy. Docs-only or internal chores do not need a tag.
+- A tag is immutable. Found a bug in a released version? Cut a new PATCH/MINOR tag. Do NOT move or delete an existing tag.

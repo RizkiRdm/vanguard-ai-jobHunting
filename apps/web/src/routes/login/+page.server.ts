@@ -3,7 +3,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '$app/env/public';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  if (locals.user) redirect(303, '/');
+  if (locals.user) redirect(303, '/dashboard');
 
   return {
     supabaseUrl: SUPABASE_URL,

@@ -32,16 +32,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
+      - uses: oven-sh/setup-bun@v2
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - run: npm ci
+      - run: bun ci
       - name: Apply local stub schema
         run: psql "$DATABASE_URL" -f supabase/local-stub.sql
         env:
           PGPASSWORD: postgres
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm run format:write
-      - run: npm test
-      - run: npm run build
+      - run: bun run typecheck
+      - run: bun run lint
+      - run: bun run format:check
+      - run: bun run test
+      - run: bun run build

@@ -42,17 +42,17 @@ session cookie and forwards requests with the user's bearer token.
 ## Five minute path
 
 ```bash
-npm install
+bun install
 cp .env.example .env      # fill in Supabase, Gemini and the pooler URL
-npm run db:migrate        # applies supabase/migrations/*.sql in order
+bun run db:migrate        # applies supabase/migrations/*.sql in order
 ```
 
 Then, in three terminals:
 
 ```bash
-npm run dev:web           # http://localhost:5173
-npm run dev:server        # http://localhost:8000
-npm run worker            # browser + AI work
+bun run dev:web           # http://localhost:5173
+bun run dev:server        # http://localhost:8000
+bun run worker            # browser + AI work
 ```
 
 Create an account on the login page, fill in your profile, upload a PDF resume,
@@ -63,11 +63,11 @@ Full instructions, including how to get each environment value: [docs/SETUP.md](
 ## Checks
 
 ```bash
-npm run check             # typecheck + lint + format:check + test + build, same as CI
-npm run doctor            # node, deps, lockfile, env names, Playwright, migrations
+bun run check             # typecheck + lint + format:check + test + build, same as CI
+bun run doctor            # node, deps, lockfile, env names, Playwright, migrations
 ```
 
-`npm run check` is the gate. `npm run doctor` explains a broken local setup without
+`bun run check` is the gate. `bun run doctor` explains a broken local setup without
 printing any secret value. The database integration tests skip unless
 `TEST_DATABASE_URL` points at a Postgres with `supabase/local-stub.sql` applied;
 `doctor` says so rather than letting the skip look like a pass.
