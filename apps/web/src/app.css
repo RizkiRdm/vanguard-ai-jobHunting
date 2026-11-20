@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @plugin "daisyui";
 
 /* Vanguard design tokens. Rules: docs/DESIGN.md. Visual reference: vanguard-ui-system.html. */

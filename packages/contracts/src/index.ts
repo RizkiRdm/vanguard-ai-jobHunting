@@ -109,6 +109,13 @@ export const RESUME_MAX_BYTES = 10 * 1024 * 1024;
 export const RESUME_MIME = 'application/pdf';
 export const RESUME_BUCKET = 'resumes';
 
+export const ResumeUploadResponse = z.object({
+  path: z.string(),
+  filename: z.string().nullable(),
+  extractedProfile: ProfileUpdate.optional(),
+});
+export type ResumeUploadResponse = z.infer<typeof ResumeUploadResponse>;
+
 export const ApiError = z.object({
   error: z.object({
     code: z.string(),

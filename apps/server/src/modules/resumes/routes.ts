@@ -7,6 +7,11 @@ import { getAdminClient } from '../../lib/supabase.ts';
 import { logger } from '../../lib/logger.ts';
 import type { AppEnv } from '../../types.ts';
 import * as profileRepo from '../profile/repository.ts';
+import { generateJson } from '../../infrastructure/ai/gemini.ts';
+import {
+  ResumeProfileExtraction,
+  RESUME_PARSE_SYSTEM_PROMPT,
+} from '../../infrastructure/ai/prompts.ts';
 
 export const resumesRouter = new Hono<AppEnv>();
 
@@ -67,7 +72,38 @@ resumesRouter.post('/', async (c) => {
     await admin.storage.from(RESUME_BUCKET).remove([previous.resume_path]);
   }
 
-  return c.json({ status: 'success', data: { path: objectPath, filename: file.name } }, 201);
+  let extractedProfile: ResumeProfileExtraction | undefined;
+  try {
+    const base64 = Buffer.from(bytes).toString('base64');
+    const extracted = await generateJson({
+      prompt: 'Extract candidate profile details from this resume document.',
+      system: RESUME_PARSE_SYSTEM_PROMPT,
+      schema: ResumeProfileExtraction,
+      userId: user.id,
+      pdfBase64: base64,
+    });
+    if (extracted && Object.values(extracted).some((v) => v !== undefined && v !== null)) {
+      await profileRepo.mergeProfile(user.id, extracted);
+      extractedProfile = extracted;
+    }
+  } catch (err) {
+    logger.warn('resume_extraction_skipped_or_failed', {
+      userId: user.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  return c.json(
+    {
+      status: 'success',
+      data: {
+        path: objectPath,
+        filename: file.name,
+        extractedProfile,
+      },
+    },
+    201,
+  );
 });
 
 resumesRouter.get('/', async (c) => {

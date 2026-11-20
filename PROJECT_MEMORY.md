@@ -8,25 +8,25 @@
 
 Vanguard is an AI job hunting assistant that discovers real job listings, prepares application materials, and fills in application forms in a browser. **Never submits without explicit user approval.**
 
-**Status:** Active Development — Roadmap plan approved (`docs/vanguard-implementation-plan-g-2026-11-18-approved.md`). Issues #88, #93, #89, #90, #94 resolved and committed. Next: Issues #91 & #92.
+**Status:** Active Development — Roadmap plan approved (`docs/vanguard-implementation-plan-g-2026-11-18-approved.md`). All 7 roadmap issues (#88, #93, #89, #90, #94, #91, #92) resolved and verified.
 
 ---
 
 ## Stack (Locked)
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | SvelteKit 3 + Svelte 5 + TypeScript |
-| API | Hono on Node.js 22+ |
-| Browser | Playwright (Chromium) |
-| Database | Supabase PostgreSQL (Postgres 16) |
-| Auth | Supabase Auth (JWT verification via `@supabase/server` + JWKS) |
-| Storage | Supabase Storage (private `resumes` bucket, 10 MB, PDF only) |
-| Query Layer | Drizzle ORM over `postgres.js` (SQL remains authoritative) |
-| Migrations | Plain SQL in `supabase/migrations/` applied via `bun run db:migrate` |
-| AI | Gemini via Vercel AI SDK (`@ai-sdk/google`) with JSON validation + token budget |
-| Contracts | Zod in `packages/contracts` (shared server/web) |
-| Testing | Vitest (unit), integration tests need `TEST_DATABASE_URL` |
+| Layer       | Technology                                                                      |
+| ----------- | ------------------------------------------------------------------------------- |
+| Frontend    | SvelteKit 3 + Svelte 5 + TypeScript                                             |
+| API         | Hono on Node.js 22+                                                             |
+| Browser     | Playwright (Chromium)                                                           |
+| Database    | Supabase PostgreSQL (Postgres 16)                                               |
+| Auth        | Supabase Auth (JWT verification via `@supabase/server` + JWKS)                  |
+| Storage     | Supabase Storage (private `resumes` bucket, 10 MB, PDF only)                    |
+| Query Layer | Drizzle ORM over `postgres.js` (SQL remains authoritative)                      |
+| Migrations  | Plain SQL in `supabase/migrations/` applied via `bun run db:migrate`            |
+| AI          | Gemini via Vercel AI SDK (`@ai-sdk/google`) with JSON validation + token budget |
+| Contracts   | Zod in `packages/contracts` (shared server/web)                                 |
+| Testing     | Vitest (unit), integration tests need `TEST_DATABASE_URL`                       |
 
 ---
 
@@ -102,30 +102,32 @@ docs/
 - ✅ **#89 (2026-11-19, `6a87dd9`)**: Routing restructure — public landing page at `/`, authenticated user dashboard moved to `/dashboard`, `PUBLIC_PATHS` updated to permit `/`, `/login`, `/auth/callback`, auth redirects updated.
 - ✅ **#90 (2026-11-19, `6a87dd9`)**: Google OAuth + email/password login — "Continue with Google" OAuth trigger, `/auth/callback/+server.ts` code exchange for session cookies with open-redirect protection.
 - ✅ **#94 (2026-11-19, `6a87dd9`)**: Public responsive landing page at `/` — built with DaisyUI + Anime.js micro-interactions, responsive mobile/tablet/desktop layouts, strict human-in-the-loop guarantee banner, `prefers-reduced-motion` compliance.
-- ✅ Latest checks (2026-11-19): `bun run typecheck`, `bun run lint`, `bun run test` (26 passed, 4 DB skipped), `bun run build` all pass.
-- ✅ Roadmap Plan: `docs/vanguard-implementation-plan-g-2026-11-18-approved.md` copied from Plannotator review.
+- ✅ **#91 (2026-11-20)**: Resume upload AI auto-population & dynamic UI states — multimodal Gemini extraction directly from uploaded PDF resume buffer, schema extraction with validation, profile auto-merge preserving existing user data, dynamic upload progress state machine (`idle` -> `uploading` -> `parsing` -> `success`), and mobile-first responsive DaisyUI controls.
+- ✅ **#92 (2026-11-20)**: Human-in-the-loop task notifications & resumption — mobile-first dashboard attention banner with direct "Answer & Resume" and "Review & Approve" actions, task view auto-polling every 3s, responsive interactive HITL card with optimistic submission states and submission payload review.
+- ✅ Latest checks (2026-11-20): `bun run check` (typecheck + svelte-check with 0 warnings, lint, format:check, test with 29 passed / 4 DB skipped, and full production build) all pass.
+- ✅ Roadmap Plan: `docs/vanguard-implementation-plan-g-2026-11-18-approved.md` completed.
 - ✅ Git: `main` at `6a87dd9`.
 
 ---
 
 ## Critical Blockers / Unverified
 
-| Area | Blocker | Resolution Needed |
-|------|---------|-------------------|
-| **Credentials** | Real `SUPABASE_SECRET_KEY`, DB password, publishable key were in `.env.example` locally (never committed, now placeholders) | Rotate `SUPABASE_SECRET_KEY` in dashboard |
-| **Wrong project residue** | Empty `resumes` bucket on `orjicvxvqrvrazazclha` (cannot delete via SQL, `storage.protect_delete`) | Delete in that project's dashboard → Storage |
-| **Auth E2E** | Only 401 path verified; no real signed-in user token tested. #85 improved messaging/docs but confirm-email toggle not reproduced on a live/local Supabase instance in this env. | Sign up/in via `/login`, call `/tasks` with real token; verify confirm-email on/off behavior |
-| **Cross-account isolation** | Not tested at runtime | Second account cannot read first's task/resume (expect 404) |
-| **Local Supabase verification** | #86 documented workflow/config but Supabase CLI not installed here; `supabase start`/clean rebuild not executed | Install CLI, run local stack, build from migrations, verify `public.schema_migrations` |
-| **Cloud promotion** | Documented as explicit/reviewed; not executed | Apply migrations to hosted project via `DATABASE_URL=<pooler> bun run db:migrate` when ready |
-| **DB integration tests** | 4 tests skipped (need `TEST_DATABASE_URL`) | Run against real DB or decide CI strategy |
-| **Discover task** | Never run against live DuckDuckGo + Gemini | One end-to-end: queued → running → succeeded |
-| **Apply task** | Never run to approval gate | One end-to-end: stops at `waiting_for_user`, approve re-queues with `submit_selector` |
-| **Token budget** | 429 path not tested live | Exceed `DAILY_TOKEN_BUDGET`, confirm 429 + `llm_usage_log` entry |
-| **Playwright** | Chromium launch + `.browser-state/` perms not verified on target | `node_modules/.bin/playwright install --with-deps chromium` |
-| **CI** | Never ran on GitHub Actions for current state | Push/confirm typecheck/lint/format/test/build pass |
-| **Deployment** | No host chosen for long-lived Node + Chromium | Decide before any deploy work |
-| **Repo hygiene** | Unrelated dirty/untracked files remain; repo-wide `prettier --check .` fails on them | Clean/format or scope format checks in CI intentionally |
+| Area                            | Blocker                                                                                                                                                                         | Resolution Needed                                                                            |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| **Credentials**                 | Real `SUPABASE_SECRET_KEY`, DB password, publishable key were in `.env.example` locally (never committed, now placeholders)                                                     | Rotate `SUPABASE_SECRET_KEY` in dashboard                                                    |
+| **Wrong project residue**       | Empty `resumes` bucket on `orjicvxvqrvrazazclha` (cannot delete via SQL, `storage.protect_delete`)                                                                              | Delete in that project's dashboard → Storage                                                 |
+| **Auth E2E**                    | Only 401 path verified; no real signed-in user token tested. #85 improved messaging/docs but confirm-email toggle not reproduced on a live/local Supabase instance in this env. | Sign up/in via `/login`, call `/tasks` with real token; verify confirm-email on/off behavior |
+| **Cross-account isolation**     | Not tested at runtime                                                                                                                                                           | Second account cannot read first's task/resume (expect 404)                                  |
+| **Local Supabase verification** | #86 documented workflow/config but Supabase CLI not installed here; `supabase start`/clean rebuild not executed                                                                 | Install CLI, run local stack, build from migrations, verify `public.schema_migrations`       |
+| **Cloud promotion**             | Documented as explicit/reviewed; not executed                                                                                                                                   | Apply migrations to hosted project via `DATABASE_URL=<pooler> bun run db:migrate` when ready |
+| **DB integration tests**        | 4 tests skipped (need `TEST_DATABASE_URL`)                                                                                                                                      | Run against real DB or decide CI strategy                                                    |
+| **Discover task**               | Never run against live DuckDuckGo + Gemini                                                                                                                                      | One end-to-end: queued → running → succeeded                                                 |
+| **Apply task**                  | Never run to approval gate                                                                                                                                                      | One end-to-end: stops at `waiting_for_user`, approve re-queues with `submit_selector`        |
+| **Token budget**                | 429 path not tested live                                                                                                                                                        | Exceed `DAILY_TOKEN_BUDGET`, confirm 429 + `llm_usage_log` entry                             |
+| **Playwright**                  | Chromium launch + `.browser-state/` perms not verified on target                                                                                                                | `node_modules/.bin/playwright install --with-deps chromium`                                  |
+| **CI**                          | Never ran on GitHub Actions for current state                                                                                                                                   | Push/confirm typecheck/lint/format/test/build pass                                           |
+| **Deployment**                  | No host chosen for long-lived Node + Chromium                                                                                                                                   | Decide before any deploy work                                                                |
+| **Repo hygiene**                | Unrelated dirty/untracked files remain; repo-wide `prettier --check .` fails on them                                                                                            | Clean/format or scope format checks in CI intentionally                                      |
 
 ---
 
@@ -164,6 +166,7 @@ bun run format:check
 ## Environment Variables (Required)
 
 **Server (`.env`):**
+
 - `DATABASE_URL` — Pooler URL (port 6543, `prepare:false`)
 - `SUPABASE_URL` — `https://<ref>.supabase.co`
 - `SUPABASE_PUBLISHABLE_KEY` — `sb_publishable_...` (client-side, RLS-bound)
@@ -172,6 +175,7 @@ bun run format:check
 - `GEMINI_API_KEY` — Gemini API key
 
 **Web (validated at build/start by `apps/web/src/env.ts`):**
+
 - `SUPABASE_URL` (same)
 - `SUPABASE_PUBLISHABLE_KEY` (same)
 - `API_BASE_URL` — `http://localhost:8000` (dev)

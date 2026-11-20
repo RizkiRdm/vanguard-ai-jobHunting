@@ -76,6 +76,25 @@ export async function upsertProfile(userId: string, update: ProfileUpdate): Prom
   return mapProfile(row);
 }
 
+export async function mergeProfile(userId: string, partial: ProfileUpdate): Promise<Profile> {
+  const existing = await getProfile(userId);
+  const merged: ProfileUpdate = {
+    full_name: existing?.full_name || partial.full_name,
+    email: existing?.email || partial.email,
+    phone: existing?.phone || partial.phone,
+    summary: existing?.summary || partial.summary,
+    target_role: existing?.target_role || partial.target_role,
+    expected_salary: existing?.expected_salary ?? partial.expected_salary,
+    skills:
+      existing?.skills && existing.skills.length > 0
+        ? Array.from(new Set([...existing.skills, ...(partial.skills ?? [])]))
+        : (partial.skills ?? []),
+    experience_years: existing?.experience_years ?? partial.experience_years,
+    location: existing?.location || partial.location,
+  };
+  return upsertProfile(userId, merged);
+}
+
 export async function setResume(
   userId: string,
   resumePath: string | null,

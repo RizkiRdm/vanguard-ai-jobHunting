@@ -1,5 +1,10 @@
 import { fail } from '@sveltejs/kit';
-import { ProfileUpdate, RESUME_MAX_BYTES, type Profile } from '@vanguard/contracts';
+import {
+  ProfileUpdate,
+  RESUME_MAX_BYTES,
+  type Profile,
+  type ResumeUploadResponse,
+} from '@vanguard/contracts';
 import { callApi, unwrap } from '../../lib/server/api';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -68,9 +73,12 @@ export const actions: Actions = {
     const body = new FormData();
     body.set('file', file, file.name);
 
-    const result = await callApi(locals, '/resumes', { method: 'POST', body });
+    const result = await callApi<ResumeUploadResponse>(locals, '/resumes', {
+      method: 'POST',
+      body,
+    });
     if (!result.ok) return fail(result.status, { error: result.message });
-    return { uploaded: true };
+    return { uploaded: true, extractedProfile: result.data.extractedProfile };
   },
 
   deleteResume: async ({ locals }) => {

@@ -7,7 +7,9 @@
     if (prefersReducedMotion) return;
 
     try {
-      const animeModule = (await import('animejs')) as unknown as { default?: (params: unknown) => void };
+      const animeModule = (await import('animejs')) as unknown as {
+        default?: (params: unknown) => void;
+      };
       const anime = animeModule.default || (animeModule as unknown as (params: unknown) => void);
       if (typeof anime === 'function') {
         anime({
@@ -43,7 +45,9 @@
     </h1>
 
     <p class="animate-fade-in text-base sm:text-lg text-[var(--fog)] max-w-2xl leading-relaxed">
-      Vanguard discovers live job listings, matches your profile using Gemini AI, and fills application forms in a real browser. It pauses at the finish line so you approve every single submission.
+      Vanguard discovers live job listings, matches your profile using Gemini AI, and fills
+      application forms in a real browser. It pauses at the finish line so you approve every single
+      submission.
     </p>
 
     <div class="animate-fade-in flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mt-2">
@@ -70,17 +74,29 @@
           <span class="h-3 w-3 rounded-full bg-red-500/80"></span>
           <span class="h-3 w-3 rounded-full bg-yellow-500/80"></span>
           <span class="h-3 w-3 rounded-full bg-green-500/80"></span>
-          <span class="ml-2 font-mono text-xs text-[var(--steel)]">vanguard-agent :: session running</span>
+          <span class="ml-2 font-mono text-xs text-[var(--steel)]"
+            >vanguard-agent :: session running</span
+          >
         </div>
-        <span class="badge badge-sm border-none bg-amber-400/20 text-amber-300 font-mono text-[10px]">
+        <span
+          class="badge badge-sm border-none bg-amber-400/20 text-amber-300 font-mono text-[10px]"
+        >
           WAITING_FOR_USER
         </span>
       </div>
       <div class="space-y-3 font-mono text-xs text-[var(--chalk)]">
-        <p class="text-[var(--fog)]">> Discovering vacancies for query "Staff Software Engineer remote"...</p>
-        <p class="text-[var(--mint)]">> Found 14 matching opportunities on company careers pages.</p>
-        <p class="text-[var(--arc-blue)]">> Opening browser automation session with Playwright...</p>
-        <p class="text-[var(--chalk)]">> Application form pre-filled: Name, Resume, Portfolio, Experience.</p>
+        <p class="text-[var(--fog)]">
+          > Discovering vacancies for query "Staff Software Engineer remote"...
+        </p>
+        <p class="text-[var(--mint)]">
+          > Found 14 matching opportunities on company careers pages.
+        </p>
+        <p class="text-[var(--arc-blue)]">
+          > Opening browser automation session with Playwright...
+        </p>
+        <p class="text-[var(--chalk)]">
+          > Application form pre-filled: Name, Resume, Portfolio, Experience.
+        </p>
         <div class="p-3 bg-[var(--void)] rounded-lg border border-[var(--hairline)] mt-3">
           <p class="text-amber-400 font-medium mb-1">Gate triggered: ready_to_submit</p>
           <p class="text-[var(--steel)] text-[11px]">
@@ -96,7 +112,9 @@
     <div
       class="p-8 rounded-2xl bg-gradient-to-b from-[var(--graphite)] to-[var(--charcoal)] border border-[var(--hairline)] flex flex-col md:flex-row items-center gap-8"
     >
-      <div class="h-16 w-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+      <div
+        class="h-16 w-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0"
+      >
         <svg class="h-8 w-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
             stroke-linecap="round"
@@ -111,7 +129,9 @@
           Strict Human-in-the-Loop Guarantee
         </h2>
         <p class="text-sm text-[var(--fog)] leading-relaxed">
-          Autonomous agents shouldn't spam employers or send unchecked information. Vanguard fills forms, captures screenshots of every step, and pauses before the final submission. You retain complete authority over every job application.
+          Autonomous agents shouldn't spam employers or send unchecked information. Vanguard fills
+          forms, captures screenshots of every step, and pauses before the final submission. You
+          retain complete authority over every job application.
         </p>
       </div>
     </div>
@@ -127,7 +147,9 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-      <div class="card p-6 bg-[var(--graphite)] border border-[var(--hairline)] rounded-xl space-y-3">
+      <div
+        class="card p-6 bg-[var(--graphite)] border border-[var(--hairline)] rounded-xl space-y-3"
+      >
         <span class="font-mono text-xs text-[var(--arc-blue)] font-bold">01 / DISCOVERY</span>
         <h3 class="text-base font-medium text-[var(--snow)]">Live Web Search</h3>
         <p class="text-xs text-[var(--fog)] leading-relaxed">
@@ -135,23 +157,31 @@
         </p>
       </div>
 
-      <div class="card p-6 bg-[var(--graphite)] border border-[var(--hairline)] rounded-xl space-y-3">
+      <div
+        class="card p-6 bg-[var(--graphite)] border border-[var(--hairline)] rounded-xl space-y-3"
+      >
         <span class="font-mono text-xs text-[var(--arc-blue)] font-bold">02 / MATCHING</span>
         <h3 class="text-base font-medium text-[var(--snow)]">AI Profile Extraction</h3>
         <p class="text-xs text-[var(--fog)] leading-relaxed">
-          Parses your resume PDF with Gemini AI, organizing your skills and work history into structured records.
+          Parses your resume PDF with Gemini AI, organizing your skills and work history into
+          structured records.
         </p>
       </div>
 
-      <div class="card p-6 bg-[var(--graphite)] border border-[var(--hairline)] rounded-xl space-y-3">
+      <div
+        class="card p-6 bg-[var(--graphite)] border border-[var(--hairline)] rounded-xl space-y-3"
+      >
         <span class="font-mono text-xs text-[var(--arc-blue)] font-bold">03 / AUTOMATION</span>
         <h3 class="text-base font-medium text-[var(--snow)]">Browser Form Fill</h3>
         <p class="text-xs text-[var(--fog)] leading-relaxed">
-          Playwright navigates to application forms, populating fields accurately without bypassing CAPTCHAs.
+          Playwright navigates to application forms, populating fields accurately without bypassing
+          CAPTCHAs.
         </p>
       </div>
 
-      <div class="card p-6 bg-[var(--graphite)] border border-[var(--hairline)] rounded-xl space-y-3">
+      <div
+        class="card p-6 bg-[var(--graphite)] border border-[var(--hairline)] rounded-xl space-y-3"
+      >
         <span class="font-mono text-xs text-[var(--mint)] font-bold">04 / APPROVAL</span>
         <h3 class="text-base font-medium text-[var(--snow)]">Your Decision</h3>
         <p class="text-xs text-[var(--fog)] leading-relaxed">
@@ -174,21 +204,24 @@
       <div class="p-6 bg-[var(--graphite)] border border-[var(--hairline)] rounded-xl space-y-3">
         <h3 class="text-base font-medium text-[var(--snow)]">Supabase Auth & Storage</h3>
         <p class="text-xs text-[var(--fog)] leading-relaxed">
-          Secure authentication with Google OAuth or email/password. Resumes stored in private buckets with short-lived signed URLs.
+          Secure authentication with Google OAuth or email/password. Resumes stored in private
+          buckets with short-lived signed URLs.
         </p>
       </div>
 
       <div class="p-6 bg-[var(--graphite)] border border-[var(--hairline)] rounded-xl space-y-3">
         <h3 class="text-base font-medium text-[var(--snow)]">Atomic Task Queue</h3>
         <p class="text-xs text-[var(--fog)] leading-relaxed">
-          PostgreSQL-backed worker tasks with <code>SKIP LOCKED</code> semantics, guaranteeing zero dropped or duplicated applications.
+          PostgreSQL-backed worker tasks with <code>SKIP LOCKED</code> semantics, guaranteeing zero dropped
+          or duplicated applications.
         </p>
       </div>
 
       <div class="p-6 bg-[var(--graphite)] border border-[var(--hairline)] rounded-xl space-y-3">
         <h3 class="text-base font-medium text-[var(--snow)]">Privacy by Design</h3>
         <p class="text-xs text-[var(--fog)] leading-relaxed">
-          Row Level Security ensures your data is only ever accessible to your account. No telemetry tracking or credential logging.
+          Row Level Security ensures your data is only ever accessible to your account. No telemetry
+          tracking or credential logging.
         </p>
       </div>
     </div>
@@ -209,12 +242,21 @@
   </section>
 
   <!-- Footer -->
-  <footer class="border-t border-[var(--hairline)] pt-8 pb-12 text-center text-xs text-[var(--steel)]">
+  <footer
+    class="border-t border-[var(--hairline)] pt-8 pb-12 text-center text-xs text-[var(--steel)]"
+  >
     <div class="flex items-center justify-center gap-6 mb-4">
       <a href="/login" class="hover:text-[var(--snow)] transition-colors">Sign in</a>
       <a href="/login?mode=signup" class="hover:text-[var(--snow)] transition-colors">Register</a>
-      <a href="https://github.com/RizkiRdm/vanguard-job-hunting" target="_blank" rel="noreferrer" class="hover:text-[var(--snow)] transition-colors">GitHub</a>
+      <a
+        href="https://github.com/RizkiRdm/vanguard-job-hunting"
+        target="_blank"
+        rel="noreferrer"
+        class="hover:text-[var(--snow)] transition-colors">GitHub</a
+      >
     </div>
-    <p>&copy; {new Date().getFullYear()} Vanguard. Open-source autonomous job discovery assistant.</p>
+    <p>
+      &copy; {new Date().getFullYear()} Vanguard. Open-source autonomous job discovery assistant.
+    </p>
   </footer>
 </div>

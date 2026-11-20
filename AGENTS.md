@@ -5,9 +5,11 @@ before changing code. Deeper detail: `docs/ARCHITECTURE.md`, `docs/SETUP.md`,
 and the audit of the Python implementation this replaced: `docs/AUDIT.md`.
 
 ## graphify
+
 Code graph at `graphify-out/`. Query before grep/read.
 
 Rules:
+
 - `graphify query "<question>"` for scoped subgraph
 - `graphify path "<A>" "<B>"` for relationships
 - `graphify explain "<concept>"` for focused concepts
@@ -20,7 +22,6 @@ Vanguard is an AI job hunting assistant. It discovers real job listings,
 prepares application material, and fills in application forms in a real browser.
 It never submits an application without an explicit approval recorded for that
 task.
-
 
 Stack: SvelteKit + Svelte 5 (web) · Hono on Node.js (API + worker) · Playwright
 (browser automation) · Supabase Postgres, Auth and private Storage · Zod
@@ -195,12 +196,14 @@ symbol. If `.codegraph/` exists, `codegraph explore "<symbols>"` answers most
 Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
 
 Core workflow:
+
 1. `agent-browser open <url>` - Navigate to page
 2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
 3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
 4. Re-snapshot after page changes
 
 ## 12. Git Rules
+
 - Every task MUST end with a commit and a push to `origin`. Uncommitted work is unfinished work.
 - MUST run the Verification Commands gate BEFORE committing. A commit that fails `go test ./...` or `gofmt -l .` is a broken commit; fix it in the same change, never amend around a failure.
 - Stage files selectively (`git add <path>`). Never `git add -A` or `git add .` — this repo gitignores `.env*`, `paperviz.db*`, `.opencode/`, and scratch output, and a blind add is how those leak into history.
@@ -210,17 +213,20 @@ Core workflow:
 - After code changes, run `graphify update .` so the code graph does not lag the tree.
 
 ### Commit messages
+
 Conventional Commits, lowercase, imperative mood, no trailing period:
 
 ```text
 <type>(<scope>): <subject ≤50 chars>
 ```
+
 - Allowed types: `feat`, `fix`, `docs`, `refactor`, `test`, `perf`, `build`, `ci`, `chore`, `revert`.
-- Add a body only when the *why* is not obvious from the subject. Never restate the diff.
+- Add a body only when the _why_ is not obvious from the subject. Never restate the diff.
 - Scopes in use: `byok`, `web`, `db`, `mcp`, `ops`, `auth`, `admin`, `pipeline`, `evidence`, `docs`.
 - Refer to plan/ADR ids when the change belongs to one: `feat(byok): ... (P07)`.
 
 ### Versioning and tags — SemVer
+
 PaperViz follows [Semantic Versioning](https://semver.org). The version lives in a git tag; there is no version constant in the code.
 
 - Tag format: `vMAJOR.MINOR.PATCH`, annotated (`git tag -a`), message = one-line summary of the release.

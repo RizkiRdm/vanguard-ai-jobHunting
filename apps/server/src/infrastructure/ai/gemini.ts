@@ -17,6 +17,8 @@ export interface GenerateOptions<T extends z.ZodTypeAny> {
   schema: T;
   /** Base64 PNG screenshot, when the decision depends on the rendered page. */
   imageBase64?: string;
+  /** Base64 PDF document, when the decision or extraction depends on a file. */
+  pdfBase64?: string;
   /** Rules the page content cannot override. Sent as systemInstruction. */
   system?: string;
 }
@@ -46,6 +48,9 @@ export async function generateJson<T extends z.ZodTypeAny>(
   > = [{ type: 'text', text: options.prompt }];
   if (options.imageBase64) {
     content.push({ type: 'file', mediaType: 'image/png', data: options.imageBase64 });
+  }
+  if (options.pdfBase64) {
+    content.push({ type: 'file', mediaType: 'application/pdf', data: options.pdfBase64 });
   }
 
   let promptTokens = 0;

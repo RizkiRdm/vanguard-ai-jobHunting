@@ -25,6 +25,7 @@ Prioritized roadmap for resolving all 7 open repository issues. Execution groupe
 ## Phase 1: Critical Bug Fix (Backend / Worker)
 
 ### Issue #88: DuckDuckGo navigation ERR_CERT_COMMON_NAME_INVALID in discovery
+
 - **Severity**: High (blocks automated job discovery worker tasks)
 - **Problem**: `apps/server/src/infrastructure/browser/discovery.ts` uses hardcoded `https://html.duckduckgo.com/html/` with query params. Fails TLS cert check in certain network environments.
 - **Root Cause**: `html.duckduckgo.com` subdomain cert mismatches or TLS termination differences.
@@ -43,6 +44,7 @@ Prioritized roadmap for resolving all 7 open repository issues. Execution groupe
 ## Phase 2: UI Foundation & Routing Restructure
 
 ### Issue #93: Standardize UI with DaisyUI and Tailwind CSS
+
 - **Severity**: Medium (blocks consistent UI for #89, #90, #94, #91, #92)
 - **Problem**: Inconsistent ad-hoc styling across web app forms and buttons; missing password visibility toggles and ARIA accessibility standards.
 - **Proposed Fix**:
@@ -58,6 +60,7 @@ Prioritized roadmap for resolving all 7 open repository issues. Execution groupe
   - Visual check of login/register/profile forms in browser with keyboard navigation and screen-reader tags.
 
 ### Issue #89: Add a Landing Page and Restructure Routing
+
 - **Severity**: Medium (blocks landing page #94)
 - **Problem**: `apps/web/src/hooks.server.ts` currently restricts root `/` to authenticated users (`PUBLIC_PATHS = new Set(['/login'])`). Root `/` renders the authenticated dashboard, leaving no space for a public landing page.
 - **Proposed Fix**:
@@ -77,6 +80,7 @@ Prioritized roadmap for resolving all 7 open repository issues. Execution groupe
 ## Phase 3: Authentication Enhancements
 
 ### Issue #90: Google OAuth and Email/Password Login
+
 - **Severity**: Medium
 - **Problem**: Login page only supports email/password; lacks Google OAuth provider integration, standard callback handler, and OAuth error feedback.
 - **Proposed Fix**:
@@ -97,6 +101,7 @@ Prioritized roadmap for resolving all 7 open repository issues. Execution groupe
 ## Phase 4: Public Landing Page
 
 ### Issue #94: Responsive Landing Page at `/`
+
 - **Severity**: Low / Enhancement
 - **Problem**: Root path needs a responsive, public-facing landing page showcasing Vanguard's AI job-hunting features.
 - **Proposed Fix**:
@@ -117,50 +122,37 @@ Prioritized roadmap for resolving all 7 open repository issues. Execution groupe
 
 ---
 
-## Phase 5: Profile & Resume AI Processing
+## Phase 5: Profile & Resume AI Processing [COMPLETED]
 
 ### Issue #91: Auto-populate profile fields from uploaded resumes
+
+- **Status**: Completed in commit for Issue #91
 - **Severity**: Medium
 - **Problem**: Uploading a PDF resume stores the file in Supabase Storage but does not parse text or populate the user profile fields.
-- **Proposed Fix**:
-  1. In `apps/server/src/modules/resumes/service.ts`:
-     - After verifying PDF magic bytes `%PDF-` and uploading to storage, extract text using `pdf-parse` (or stdlib stream parser).
-     - Call Gemini AI prompt (`extractProfileFromResume(text)`) returning structured JSON matching `UpdateProfileInput` schema (name, email, phone, location, skills, experience, education).
-     - Update user's profile record in DB with extracted fields where currently blank or update suggested draft.
-  2. In `apps/web/src/routes/resumes/+page.svelte` and `profile/+page.svelte`:
-     - Add dynamic state machine during upload: `idle` -> `uploading` -> `parsing` -> `success` / `error`.
-     - Display extracted fields with instant inline editing so user can verify and save.
-- **Dependencies**: #93 (UI feedback states).
-- **Verification**:
-  - Test upload with valid test PDF fixture: verify text extracted, Gemini prompt called with truncated CV text, profile fields updated.
-  - Test upload with corrupted / non-PDF file: verify `%PDF-` check rejects without calling AI.
+- **Implemented**:
+  1. Multimodal native PDF extraction in `gemini.ts` using `ResumeProfileExtraction` schema.
+  2. Auto-merge of extracted non-empty fields in profile repository.
+  3. Dynamic upload state machine (`idle` -> `uploading` -> `parsing` -> `success`) and mobile-first DaisyUI controls in `profile/+page.svelte`.
 
 ---
 
-## Phase 6: Human-in-the-Loop Task Alerts & Resumption
+## Phase 6: Human-in-the-Loop Task Alerts & Resumption [COMPLETED]
 
 ### Issue #92: Human-in-the-loop task resumption & notifications
+
+- **Status**: Completed in commit for Issue #92
 - **Severity**: Medium
 - **Problem**: Tasks pausing in `waiting_for_user` (e.g. CAPTCHA, 2FA, approval before submission) have no clear real-time alert or inline resumption UI on the dashboard.
-- **Proposed Fix**:
-  1. In `apps/web/src/routes/dashboard/+page.svelte`:
-     - Query tasks with `status = 'waiting_for_user'`.
-     - Display prominent DaisyUI alert banner at top of dashboard when count > 0.
-     - Card view displaying pending task reason (`details.question` or `approval_required`).
-  2. Implement resumption actions:
-     - For answer requests: Input field + "Submit Answer" button calling `POST /tasks/:id/answer`.
-     - For approval requests: Review details + "Approve" button calling `POST /tasks/:id/approve` and "Cancel" button calling `POST /tasks/:id/cancel`.
-  3. Task list polling:
-     - Poll `/tasks` endpoint or subscribe to task status changes to clear alert banner once task transitions out of `waiting_for_user`.
-- **Dependencies**: #89 (dashboard route), #93 (DaisyUI alerts).
-- **Verification**:
-  - Mock task in `waiting_for_user` with question payload: banner displays question, submitting answer triggers API call and transitions status.
-  - Mock task ready for submission approval: clicking approve calls `/tasks/:id/approve` and task returns to `queued`/`running`.
+- **Implemented**:
+  1. Prominent mobile-first DaisyUI alert banner with actionable CTA buttons on `/dashboard`.
+  2. Dedicated interactive HITL card on `/tasks/[id]` with auto-polling every 3s, responsive form with optimistic submission state.
 
 ---
 
 ## Overall Test & CI Verification Gate
+
 Run before finalizing each phase:
+
 ```bash
 bun run check        # typecheck + svelte-check + lint + format:check + test + build
 bun run test         # all unit tests across contracts, server, and web

@@ -192,12 +192,18 @@
       />
 
       {#if errorMessage}
-        <div class="alert alert-error text-sm py-2 px-3 rounded-lg border border-[var(--coral)] bg-red-950/40 text-red-200" role="alert">
+        <div
+          class="alert alert-error text-sm py-2 px-3 rounded-lg border border-[var(--coral)] bg-red-950/40 text-red-200"
+          role="alert"
+        >
           <span>{errorMessage}</span>
         </div>
       {/if}
       {#if infoMessage}
-        <div class="alert alert-info text-sm py-2 px-3 rounded-lg border border-[var(--arc-blue)] bg-blue-950/40 text-blue-200" role="status">
+        <div
+          class="alert alert-info text-sm py-2 px-3 rounded-lg border border-[var(--arc-blue)] bg-blue-950/40 text-blue-200"
+          role="status"
+        >
           <span>{infoMessage}</span>
         </div>
       {/if}
