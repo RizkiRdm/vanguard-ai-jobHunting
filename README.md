@@ -100,9 +100,10 @@ docs/                    setup, architecture, reference, audit
 
 ## Documentation
 
-- [docs/SETUP.md](docs/SETUP.md) — install, configure, migrate, run, troubleshoot
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how the pieces fit and why
-- [docs/FEATURES.md](docs/FEATURES.md) — where each feature lives, UI to tests
-- [docs/REFERENCE.md](docs/REFERENCE.md) — endpoints, environment variables, SQL functions
-- [docs/AUDIT.md](docs/AUDIT.md) — what the Python version got wrong and how it was fixed
-- [AGENTS.md](AGENTS.md) — rules for coding agents working in this repository
+Complete documentation organized via the **Diátaxis framework** is located in [`docs/README.md`](docs/README.md):
+
+- **Tutorial**: [docs/TUTORIAL.md](docs/TUTORIAL.md) — step-by-step from zero to automated application and approval gate
+- **How-To Guides**: [docs/SETUP.md](docs/SETUP.md) (setup and install), [docs/HOW_TO_GUIDES.md](docs/HOW_TO_GUIDES.md) (OAuth, HITL approval, token budgets, headed debugging)
+- **Reference**: [docs/REFERENCE.md](docs/REFERENCE.md) (endpoints, env variables, SQL functions, contracts), [docs/FEATURES.md](docs/FEATURES.md) (feature map)
+- **Explanation**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (processes, queue concurrency, security model), [docs/AUDIT.md](docs/AUDIT.md) (legacy architecture fixes)
+- **Guidelines**: [AGENTS.md](AGENTS.md) — rules for coding agents working in this repository

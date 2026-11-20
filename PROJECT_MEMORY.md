@@ -1,6 +1,6 @@
 # Vanguard AI Job Hunting — Project Memory
 
-**Last updated:** 2026-11-19 | **Commit:** `6a87dd9` (main) | **Branch:** main
+**Last updated:** 2026-11-20 | **Commit:** `4aaf0e5` (main) | **Branch:** main
 
 ---
 
@@ -8,7 +8,7 @@
 
 Vanguard is an AI job hunting assistant that discovers real job listings, prepares application materials, and fills in application forms in a browser. **Never submits without explicit user approval.**
 
-**Status:** Active Development — Roadmap plan approved (`docs/vanguard-implementation-plan-g-2026-11-18-approved.md`). All 7 roadmap issues (#88, #93, #89, #90, #94, #91, #92) resolved and verified.
+**Status:** Active Development — Roadmap plan approved (`docs/vanguard-implementation-plan-g-2026-11-18-approved.md`). All 7 roadmap issues (#88, #89, #90, #91, #92, #93, #94) resolved, verified, and closed.
 
 ---
 
@@ -102,11 +102,11 @@ docs/
 - ✅ **#89 (2026-11-19, `6a87dd9`)**: Routing restructure — public landing page at `/`, authenticated user dashboard moved to `/dashboard`, `PUBLIC_PATHS` updated to permit `/`, `/login`, `/auth/callback`, auth redirects updated.
 - ✅ **#90 (2026-11-19, `6a87dd9`)**: Google OAuth + email/password login — "Continue with Google" OAuth trigger, `/auth/callback/+server.ts` code exchange for session cookies with open-redirect protection.
 - ✅ **#94 (2026-11-19, `6a87dd9`)**: Public responsive landing page at `/` — built with DaisyUI + Anime.js micro-interactions, responsive mobile/tablet/desktop layouts, strict human-in-the-loop guarantee banner, `prefers-reduced-motion` compliance.
-- ✅ **#91 (2026-11-20)**: Resume upload AI auto-population & dynamic UI states — multimodal Gemini extraction directly from uploaded PDF resume buffer, schema extraction with validation, profile auto-merge preserving existing user data, dynamic upload progress state machine (`idle` -> `uploading` -> `parsing` -> `success`), and mobile-first responsive DaisyUI controls.
-- ✅ **#92 (2026-11-20)**: Human-in-the-loop task notifications & resumption — mobile-first dashboard attention banner with direct "Answer & Resume" and "Review & Approve" actions, task view auto-polling every 3s, responsive interactive HITL card with optimistic submission states and submission payload review.
+- ✅ **#91 (2026-11-20, `4aaf0e5`)**: Resume upload AI auto-population & dynamic UI states — multimodal Gemini extraction directly from uploaded PDF resume buffer, schema extraction with validation, profile auto-merge preserving existing user data, dynamic upload progress state machine (`idle` -> `uploading` -> `parsing` -> `success`), and mobile-first responsive DaisyUI controls.
+- ✅ **#92 (2026-11-20, `4aaf0e5`)**: Human-in-the-loop task notifications & resumption — mobile-first dashboard attention banner with direct "Answer & Resume" and "Review & Approve" actions, task view auto-polling every 3s, responsive interactive HITL card with optimistic submission states and submission payload review.
 - ✅ Latest checks (2026-11-20): `bun run check` (typecheck + svelte-check with 0 warnings, lint, format:check, test with 29 passed / 4 DB skipped, and full production build) all pass.
 - ✅ Roadmap Plan: `docs/vanguard-implementation-plan-g-2026-11-18-approved.md` completed.
-- ✅ Git: `main` at `6a87dd9`.
+- ✅ Git: `main` at `4aaf0e5`.
 
 ---
 
@@ -184,9 +184,15 @@ bun run format:check
 
 ## Open GitHub Issues
 
-- Phase 5: **#91** — Auto-populate profile fields from uploaded resumes (Gemini AI text extraction & autofill).
-- Phase 6: **#92** — Human-in-the-loop task resumption & notifications (dashboard alert banner for `waiting_for_user`).
-- Resolved in this cycle: #88 (`b6429cd`), #93 (`6a87dd9`), #89 (`6a87dd9`), #90 (`6a87dd9`), #94 (`6a87dd9`).
+- **None** — All 7 roadmap issues (#88, #89, #90, #91, #92, #93, #94) are completed, verified, and closed.
+- Resolved in this cycle:
+  - #88 (`b6429cd`): DuckDuckGo TLS cert fix
+  - #93 (`6a87dd9`): UI standardization (Tailwind CSS v4 & DaisyUI v5, PasswordInput, accessibility)
+  - #89 (`6a87dd9`): Routing restructure (`/` landing page, `/dashboard` app home, auth guard)
+  - #90 (`6a87dd9`): Google OAuth + email/password login flow
+  - #94 (`6a87dd9`): Responsive landing page with Anime.js animations
+  - #91 (`4aaf0e5`): Resume upload AI autofill & dynamic UI upload states
+  - #92 (`4aaf0e5`): Human-in-the-loop task notifications & resumption
 
 ---
 
@@ -202,12 +208,14 @@ bun run format:check
 
 ## Next Session: Start Here
 
-1. Read `docs/vanguard-implementation-plan-g-2026-11-18-approved.md` for prioritized roadmap.
-2. Read this file + `AGENTS.md`.
-3. Baseline checks: `bun run typecheck && bun run lint && bun run test && bun run build` (expect all passing, 26 unit tests pass).
-4. Implement Phase 5: Issue #91 (Resume upload text extraction & Gemini profile autofill in `apps/server/src/modules/resumes/` and `apps/web/src/routes/profile/`).
-5. Implement Phase 6: Issue #92 (Task resumption & notification alerts for `waiting_for_user` tasks in `apps/web/src/routes/dashboard/` and task details).
-6. Commit and verify incrementally.
+1. Read `PROJECT_MEMORY.md` and `AGENTS.md`.
+2. Baseline checks: `bun run check` (expect all green; 29 unit tests pass, 4 DB integration tests skipped without `TEST_DATABASE_URL`).
+3. Next steps / roadmap extensions:
+   - End-to-end live testing with real credentials (live DuckDuckGo scrape + Gemini live runs, live browser apply flow).
+   - Local Supabase setup verification (`supabase start` and clean rebuild against local instance).
+   - Token budget 429 live verification.
+   - Production deployment strategy for long-lived Node API, worker, and Chromium containers.
+4. Commit and verify incrementally.
 
 ---
 

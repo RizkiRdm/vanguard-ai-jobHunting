@@ -165,6 +165,14 @@ These have all cost time before. Check them first when something behaves oddly.
   cookies; it is gitignored and must never be served or logged.
 - **DuckDuckGo HTML search is a scrape.** Selectors can change; when discovery
   returns nothing, check `searchJobs` before blaming the AI.
+- **Routing structure:** `/` is the public marketing landing page (with Anime.js
+  micro-animations); the authenticated user app lives at `/dashboard`. `PUBLIC_PATHS`
+  in `apps/web/src/hooks.server.ts` allows `/`, `/login`, and `/auth/callback`.
+- **Gemini multimodal PDF extraction:** Gemini handles raw PDF base64 buffers directly
+  (`application/pdf`) via `@ai-sdk/google` without external PDF parsing libraries.
+- **Task status polling:** The task detail page auto-polls every 3s while a task is in
+  a non-terminal state (`queued`, `running`, `waiting_for_user`), ensuring seamless
+  resumption feedback without WebSocket complexity.
 
 ## 9. Workflow for agents
 
@@ -205,9 +213,9 @@ Core workflow:
 ## 12. Git Rules
 
 - Every task MUST end with a commit and a push to `origin`. Uncommitted work is unfinished work.
-- MUST run the Verification Commands gate BEFORE committing. A commit that fails `go test ./...` or `gofmt -l .` is a broken commit; fix it in the same change, never amend around a failure.
-- Stage files selectively (`git add <path>`). Never `git add -A` or `git add .` — this repo gitignores `.env*`, `paperviz.db*`, `.opencode/`, and scratch output, and a blind add is how those leak into history.
-- Never commit secrets. `.env.development`, real API keys, `paperviz.db`, and build output stay ignored.
+- MUST run the Verification Commands gate BEFORE committing (`bun run check`). A commit that fails `bun run check` is a broken commit; fix it in the same change, never amend around a failure.
+- Stage files selectively (`git add <path>`). Never `git add -A` or `git add .` — this repo gitignores `.env*`, `.opencode/`, and scratch output, and a blind add is how those leak into history.
+- Never commit secrets. `.env`, real API keys, and build output stay ignored.
 - Do NOT force-push to `main`. Do NOT rewrite published history. If a commit must be corrected, add a new commit.
 - Do NOT use `git update-index --skip-worktree` or `--assume-unchanged` to hide local changes.
 - After code changes, run `graphify update .` so the code graph does not lag the tree.
@@ -222,16 +230,16 @@ Conventional Commits, lowercase, imperative mood, no trailing period:
 
 - Allowed types: `feat`, `fix`, `docs`, `refactor`, `test`, `perf`, `build`, `ci`, `chore`, `revert`.
 - Add a body only when the _why_ is not obvious from the subject. Never restate the diff.
-- Scopes in use: `byok`, `web`, `db`, `mcp`, `ops`, `auth`, `admin`, `pipeline`, `evidence`, `docs`.
-- Refer to plan/ADR ids when the change belongs to one: `feat(byok): ... (P07)`.
+- Scopes in use: `web`, `server`, `worker`, `contracts`, `db`, `auth`, `ai`, `browser`, `docs`.
+- Refer to issue numbers when the change belongs to one: `feat(web): add hitl alerts (#92)`.
 
 ### Versioning and tags — SemVer
 
-PaperViz follows [Semantic Versioning](https://semver.org). The version lives in a git tag; there is no version constant in the code.
+Vanguard follows [Semantic Versioning](https://semver.org). The version lives in a git tag; there is no version constant in the code.
 
 - Tag format: `vMAJOR.MINOR.PATCH`, annotated (`git tag -a`), message = one-line summary of the release.
 - The project is **pre-1.0**. `MAJOR` stays `0` until the REST contract in `docs/openapi.yaml` is declared stable; bumping to `1.0.0` is an explicit owner decision, not an agent decision.
-- `MINOR` — a feature, or a **breaking change while `MAJOR` is 0** (pre-1.0 semver: anything may break). New endpoint, new MCP tool, removed field, changed response shape, removed feature.
+- `MINOR` — a feature, or a **breaking change while `MAJOR` is 0** (pre-1.0 semver: anything may break). New endpoint, new contract field, changed response shape, removed feature.
 - `PATCH` — backward-compatible fix or internal change. Bug fix, dependency bump, docs, refactor with no contract change, test, CI.
 - Tag only a state that passed the full Verification Commands gate on a clean tree.
 - Tag every user-visible deploy. Docs-only or internal chores do not need a tag.
