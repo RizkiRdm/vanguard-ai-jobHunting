@@ -14,6 +14,13 @@ const shutdown = (signal: string) => {
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
+process.on('unhandledRejection', (error: unknown) => {
+  logger.error('worker_unhandled_rejection', {
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+  });
+});
+
 logger.info('worker_boot', { environment: env.NODE_ENV });
 
 worker
