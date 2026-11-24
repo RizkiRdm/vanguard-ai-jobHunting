@@ -14,6 +14,7 @@
   ],
   "scripts": {
     "dev": "bun --filter '*' --if-present dev",
+    "dev:all": "bash scripts/dev.sh",
     "dev:server": "bun --filter @vanguard/server dev",
     "dev:web": "bun --filter @vanguard/web dev",
     "worker": "bun --filter @vanguard/server worker",
